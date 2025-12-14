@@ -17,6 +17,9 @@ import Budgets from "./pages/dashboard/Budgets";
 import Goals from "./pages/dashboard/Goals";
 import Accounts from "./pages/dashboard/Accounts";
 import Transactions from "./pages/dashboard/Transactions";
+import UploadBill from "./pages/dashboard/UploadBill";
+import Reports from "./pages/dashboard/Reports";
+import Profile from "./pages/dashboard/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +45,9 @@ const App = () => (
             <Route path="goals" element={<Goals />} />
             <Route path="accounts" element={<Accounts />} />
             <Route path="transactions" element={<Transactions />} />
+            <Route path="upload-bill" element={<UploadBill />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="profile" element={<Profile />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

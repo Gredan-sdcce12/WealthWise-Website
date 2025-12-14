@@ -6,6 +6,9 @@ import {
   Target,
   TrendingUp,
   Building,
+  Receipt,
+  PieChart,
+  User,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -16,10 +19,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 // Minimal navigation for viva-friendly explanation
 const navItems = [
   { icon: Home, label: "Dashboard", path: "/dashboard" },
+  { icon: TrendingUp, label: "Transactions", path: "/dashboard/transactions" },
   { icon: Wallet, label: "Budgets", path: "/dashboard/budgets" },
   { icon: Target, label: "Goals", path: "/dashboard/goals" },
-  { icon: TrendingUp, label: "Transactions", path: "/dashboard/transactions" },
-  { icon: Building, label: "Accounts", path: "/dashboard/accounts" },
+  // { icon: Building, label: "Accounts", path: "/dashboard/accounts" },
+  { icon: Receipt, label: "Upload Bill", path: "/dashboard/upload-bill" },
+  { icon: PieChart, label: "Reports", path: "/dashboard/reports" },
+  { icon: User, label: "Profile", path: "/dashboard/profile" },
 ];
 
 export function DashboardSidebar({ collapsed, onToggle }) {
