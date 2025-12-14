@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, TrendingUp, TrendingDown, Plus } from "lucide-react";
+import { Trash2, TrendingUp, TrendingDown, Plus, Edit2 } from "lucide-react";
 
 const categories = [
   { value: "salary", label: "Salary" },
@@ -63,6 +63,8 @@ export default function Transactions() {
   });
 
   const [errors, setErrors] = useState({});
+  const [editingId, setEditingId] = useState(null);
+  const [filter, setFilter] = useState("all");
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -111,16 +113,35 @@ export default function Transactions() {
       return;
     }
 
-    const newTransaction = {
-      id: Date.now(),
-      amount: parseFloat(formData.amount),
-      type: formData.type,
-      category: formData.category,
-      date: formData.date,
-      description: formData.description || "No description",
-    };
-
-    setTransactions((prev) => [newTransaction, ...prev]);
+    if (editingId) {
+      // Update existing transaction
+      setTransactions((prev) =>
+        prev.map((t) =>
+          t.id === editingId
+            ? {
+                ...t,
+                amount: parseFloat(formData.amount),
+                type: formData.type,
+                category: formData.category,
+                date: formData.date,
+                description: formData.description || "No description",
+              }
+            : t
+        )
+      );
+      setEditingId(null);
+    } else {
+      // Add new transaction
+      const newTransaction = {
+        id: Date.now(),
+        amount: parseFloat(formData.amount),
+        type: formData.type,
+        category: formData.category,
+        date: formData.date,
+        description: formData.description || "No description",
+      };
+      setTransactions((prev) => [newTransaction, ...prev]);
+    }
 
     setFormData({
       amount: "",
@@ -133,6 +154,28 @@ export default function Transactions() {
 
   const handleDelete = (id) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleEdit = (transaction) => {
+    setFormData({
+      amount: transaction.amount.toString(),
+      type: transaction.type,
+      category: transaction.category,
+      date: transaction.date,
+      description: transaction.description,
+    });
+    setEditingId(transaction.id);
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setFormData({
+      amount: "",
+      type: "",
+      category: "",
+      date: "",
+      description: "",
+    });
   };
 
   const formatDate = (dateString) => {
@@ -209,7 +252,7 @@ export default function Transactions() {
         <CardContent className="p-6">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <Plus className="w-5 h-5" />
-            Add New Transaction
+            {editingId ? "Edit Transaction" : "Add New Transaction"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -233,23 +276,25 @@ export default function Transactions() {
                   <SelectTrigger className={errors.type ? "border-red-500" : ""}>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="expense">Expense</SelectItem>
+                  <SelectContent className="bg-white text-gray-900 shadow-lg">
+                    <SelectItem value="income" className="text-gray-900 hover:bg-gray-100">Income</SelectItem>
+                    <SelectItem value="expense" className="text-gray-900 hover:bg-gray-100">Expense</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
               </div>
+            </div>
 
-              <div className="space-y-2">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 relative z-[9999]">
                 <Label htmlFor="category">Category <span className="text-red-500">*</span></Label>
                 <Select value={formData.category} onValueChange={(value) => handleChange("category", value)}>
-                  <SelectTrigger className={errors.category ? "border-red-500" : ""}>
+                  <SelectTrigger className={`${errors.category ? "border-red-500" : ""} relative z-[9999]`}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999] bg-white text-gray-900 shadow-lg">
                     {categories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
+                      <SelectItem key={cat.value} value={cat.value} className="text-gray-900 hover:bg-gray-100">
                         {cat.label}
                       </SelectItem>
                     ))}
@@ -282,21 +327,40 @@ export default function Transactions() {
               />
             </div>
 
-            <Button type="submit" className="w-full md:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Transaction
-            </Button>
+            <div className="pt-4 space-y-2 flex flex-wrap gap-2">
+              <Button type="submit">
+                <Plus className="w-4 h-4 mr-2" />
+                {editingId ? "Update Transaction" : "Add Transaction"}
+              </Button>
+              {editingId && (
+                <Button type="button" variant="outline" onClick={handleCancel}>
+                  Cancel
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
 
-      <Card variant="elevated">
+      <Card variant="elevated" className="mt-8">
         <CardContent className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Recent Transactions</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Recent Transactions</h2>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white text-gray-900 shadow-lg">
+                <SelectItem value="all" className="text-gray-900 hover:bg-gray-100">All Transactions</SelectItem>
+                <SelectItem value="income" className="text-gray-900 hover:bg-gray-100">Income Only</SelectItem>
+                <SelectItem value="expense" className="text-gray-900 hover:bg-gray-100">Expenses Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          {transactions.length === 0 ? (
+          {transactions.filter((t) => filter === "all" || t.type === filter).length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
-              No transactions yet. Add your first transaction above!
+              No transactions added yet. Start tracking your finances!
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -312,7 +376,9 @@ export default function Transactions() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((transaction) => (
+                  {transactions
+                    .filter((t) => filter === "all" || t.type === filter)
+                    .map((transaction) => (
                     <tr key={transaction.id} className="border-b hover:bg-muted/50 transition-colors">
                       <td className="py-3 px-4 text-sm">{formatDate(transaction.date)}</td>
                       <td className="py-3 px-4 text-sm font-medium">{transaction.description}</td>
@@ -344,7 +410,15 @@ export default function Transactions() {
                       >
                         {transaction.type === "income" ? "+" : "-"}${transaction.amount.toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-4 text-center space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(transaction)}
+                          className="hover:bg-blue-100 hover:text-blue-600"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

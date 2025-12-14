@@ -12,11 +12,11 @@ export function Navbar() {
           </div>
           <span className="text-xl font-bold text-foreground">WealthWise</span>
         </Link>
-        <div className="hidden md:flex items-center gap-8">
+        {/* <div className="hidden md:flex items-center gap-8">
           <a href="/#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</a>
           <a href="/#testimonials" className="text-muted-foreground hover:text-foreground transition-colors">Testimonials</a>
           <a href="/#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
-        </div>
+        </div> */}
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost">
             <Link to="/auth">Sign In</Link>
