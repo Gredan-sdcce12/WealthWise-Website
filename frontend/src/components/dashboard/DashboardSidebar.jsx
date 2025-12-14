@@ -4,55 +4,22 @@ import {
   Home,
   Wallet,
   Target,
-  CreditCard,
-  Calendar,
-  Activity,
-  PieChart,
-  FileText,
-  Settings,
-  User,
-  Info,
-  Receipt,
-  Clock,
-  Building,
-  Tag,
-  List,
   TrendingUp,
+  Building,
   ChevronLeft,
   ChevronRight,
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 
-const mainNavItems = [
-  { icon: Home, label: "Home", path: "/dashboard" },
-];
-
-const financeItems = [
+// Minimal navigation for viva-friendly explanation
+const navItems = [
+  { icon: Home, label: "Dashboard", path: "/dashboard" },
   { icon: Wallet, label: "Budgets", path: "/dashboard/budgets" },
   { icon: Target, label: "Goals", path: "/dashboard/goals" },
-  { icon: CreditCard, label: "Loans", path: "/dashboard/loans" },
-  { icon: Receipt, label: "Subscriptions", path: "/dashboard/subscriptions" },
-  { icon: Clock, label: "Scheduled", path: "/dashboard/scheduled" },
-  { icon: Calendar, label: "Calendar", path: "/dashboard/calendar" },
-  { icon: Activity, label: "Activity Log", path: "/dashboard/activity" },
-  { icon: PieChart, label: "All Spending", path: "/dashboard/spending" },
-];
-
-const dataItems = [
+  { icon: TrendingUp, label: "Transactions", path: "/dashboard/transactions" },
   { icon: Building, label: "Accounts", path: "/dashboard/accounts" },
-  { icon: FileText, label: "Budget Details", path: "/dashboard/budget-details" },
-  { icon: Tag, label: "Categories", path: "/dashboard/categories" },
-  { icon: List, label: "Titles", path: "/dashboard/titles" },
-  { icon: TrendingUp, label: "Goal Details", path: "/dashboard/goal-details" },
-];
-
-const settingsItems = [
-  { icon: User, label: "Profile", path: "/dashboard/profile" },
-  { icon: Settings, label: "Settings", path: "/dashboard/settings" },
-  { icon: Info, label: "About", path: "/dashboard/about" },
 ];
 
 export function DashboardSidebar({ collapsed, onToggle }) {
@@ -76,15 +43,6 @@ export function DashboardSidebar({ collapsed, onToggle }) {
           <span className="text-sm font-medium truncate">{label}</span>
         )}
       </NavLink>
-    );
-  };
-
-  const SectionTitle = ({ title }) => {
-    if (collapsed) return null;
-    return (
-      <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-        {title}
-      </h3>
     );
   };
 
@@ -114,37 +72,10 @@ export function DashboardSidebar({ collapsed, onToggle }) {
 
       {/* Navigation */}
       <ScrollArea className="flex-1 py-4">
-        <div className="px-3 space-y-6">
-          {/* Main */}
-          <div className="space-y-1">
-            {mainNavItems.map((item) => (
-              <NavItem key={item.path} {...item} />
-            ))}
-          </div>
-
-          {/* Finance Modules */}
-          <div className="space-y-1">
-            <SectionTitle title="Finance" />
-            {financeItems.map((item) => (
-              <NavItem key={item.path} {...item} />
-            ))}
-          </div>
-
-          {/* Data Management */}
-          <div className="space-y-1">
-            <SectionTitle title="Manage Data" />
-            {dataItems.map((item) => (
-              <NavItem key={item.path} {...item} />
-            ))}
-          </div>
-
-          {/* Settings */}
-          <div className="space-y-1">
-            <SectionTitle title="Settings" />
-            {settingsItems.map((item) => (
-              <NavItem key={item.path} {...item} />
-            ))}
-          </div>
+        <div className="px-3 space-y-1">
+          {navItems.map((item) => (
+            <NavItem key={item.path} {...item} />
+          ))}
         </div>
       </ScrollArea>
 
