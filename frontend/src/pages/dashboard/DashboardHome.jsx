@@ -102,7 +102,7 @@ export default function DashboardHome() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Monthly Income</p>
+                <p className="text-sm text-muted-foreground">Rauls Monthly Income</p>
                 <p className="text-2xl font-bold mt-1">₹6,050.00</p>
                 <div className="flex items-center gap-1 mt-2 text-sm text-emerald-600">
                   <ArrowUpRight className="w-4 h-4" />
