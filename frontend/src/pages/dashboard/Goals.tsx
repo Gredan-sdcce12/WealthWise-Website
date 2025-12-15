@@ -41,7 +41,7 @@ export default function Goals() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Saved</p>
-                <p className="text-2xl font-bold">${totalSaved.toLocaleString()}</p>
+                <p className="text-2xl font-bold">₹{totalSaved.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -111,8 +111,8 @@ export default function Goals() {
                 <div className="space-y-3">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-3xl font-bold">${goal.current.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">of ${goal.target.toLocaleString()}</p>
+                      <p className="text-3xl font-bold">₹{goal.current.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">of ₹{goal.target.toLocaleString()}</p>
                     </div>
                     <span 
                       className="text-sm font-medium px-2 py-1 rounded-full"
@@ -126,7 +126,7 @@ export default function Goals() {
                   
                   <div className="flex justify-between text-sm pt-2">
                     <span className="text-muted-foreground">
-                      ${remaining.toLocaleString()} remaining
+                      ₹{remaining.toLocaleString()} remaining
                     </span>
                     <AddFundsDialog 
                       goalName={goal.name}

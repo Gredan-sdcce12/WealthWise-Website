@@ -206,7 +206,7 @@ export default function Transactions() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Income</p>
                 <p className="text-2xl font-bold text-emerald-600 mt-1">
-                  ${totalIncome.toLocaleString()}
+                  ₹{totalIncome.toLocaleString()}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -222,7 +222,7 @@ export default function Transactions() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Expenses</p>
                 <p className="text-2xl font-bold text-red-600 mt-1">
-                  ${totalExpenses.toLocaleString()}
+                  ₹{totalExpenses.toLocaleString()}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
@@ -240,7 +240,7 @@ export default function Transactions() {
                 <p
                   className={`text-2xl font-bold mt-1 ${balance >= 0 ? "text-emerald-600" : "text-red-600"}`}
                 >
-                  ${balance.toLocaleString()}
+                  ₹{balance.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -408,7 +408,7 @@ export default function Transactions() {
                           transaction.type === "income" ? "text-emerald-600" : "text-red-600"
                         }`}
                       >
-                        {transaction.type === "income" ? "+" : "-"}${transaction.amount.toLocaleString()}
+                        {transaction.type === "income" ? "+" : "-"}₹{transaction.amount.toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-center space-x-1">
                         <Button

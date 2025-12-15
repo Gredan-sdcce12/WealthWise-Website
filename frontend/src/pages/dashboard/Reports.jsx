@@ -70,7 +70,7 @@ export default function Reports() {
 
   // Simulated PDF download
   const downloadPDF = () => {
-    const placeholder = `WealthWise Report\n\nTotal Expenses: $${totalExpenses.toFixed(
+    const placeholder = `WealthWise Report\n\nTotal Expenses: ₹${totalExpenses.toFixed(
       2
     )}\n\nThis is a placeholder PDF. Replace with real export later.`;
     const blob = new Blob([placeholder], { type: "application/pdf" });
@@ -107,7 +107,7 @@ export default function Reports() {
         <Card variant="elevated">
           <CardContent className="p-6">
             <p className="text-sm text-muted-foreground">Total Expenses</p>
-            <p className="text-2xl font-bold mt-1 text-red-600">${totalExpenses.toLocaleString()}</p>
+            <p className="text-2xl font-bold mt-1 text-red-600">₹{totalExpenses.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-2">Based on dummy data</p>
           </CardContent>
         </Card>

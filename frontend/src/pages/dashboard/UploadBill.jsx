@@ -116,7 +116,7 @@ export default function UploadBill() {
                       <span className="font-semibold">Bill Date:</span> {extractedData.billDate}
                     </div>
                     <div>
-                      <span className="font-semibold">Total Amount:</span> ${extractedData.amount.toFixed(2)}
+                      <span className="font-semibold">Total Amount:</span> ₹{extractedData.amount.toFixed(2)}
                     </div>
                     <div>
                       <span className="font-semibold">Category:</span> {extractedData.category}

@@ -85,7 +85,7 @@ export default function DashboardHome() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Balance</p>
-                <p className="text-2xl font-bold mt-1">$24,562.80</p>
+                <p className="text-2xl font-bold mt-1">₹24,562.80</p>
                 <div className="flex items-center gap-1 mt-2 text-sm text-emerald-600">
                   <TrendingUp className="w-4 h-4" />
                   <span>+12.5%</span>
@@ -103,7 +103,7 @@ export default function DashboardHome() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Income</p>
-                <p className="text-2xl font-bold mt-1">$6,050.00</p>
+                <p className="text-2xl font-bold mt-1">₹6,050.00</p>
                 <div className="flex items-center gap-1 mt-2 text-sm text-emerald-600">
                   <ArrowUpRight className="w-4 h-4" />
                   <span>+8.2%</span>
@@ -121,7 +121,7 @@ export default function DashboardHome() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Expenses</p>
-                <p className="text-2xl font-bold mt-1">$2,847.32</p>
+                <p className="text-2xl font-bold mt-1">₹2,847.32</p>
                 <div className="flex items-center gap-1 mt-2 text-sm text-destructive">
                   <ArrowDownRight className="w-4 h-4" />
                   <span>-3.1%</span>
