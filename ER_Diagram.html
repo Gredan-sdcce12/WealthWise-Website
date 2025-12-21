@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WealthWise ER Diagram</title>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "default",
+        er: {
+          useMaxWidth: true,
+        },
+      });
+    </script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+      }
+      .instructions {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        border-left: 4px solid #2196f3;
+      }
+      .mermaid {
+        background: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>WealthWise - Entity Relationship Diagram</h1>
+      <p class="subtitle">AI-Powered Personal Finance Planner</p>
+
+      <div class="instructions">
+        <strong>📸 To save as image:</strong> Right-click on the diagram → "Save
+        Image As" or use browser screenshot tools
+      </div>
+
+      <div class="mermaid">
+        erDiagram %% Core Entities User ||--o{ Account : "owns" User ||--o{
+        Transaction : "creates" User ||--o{ Budget : "manages" User ||--o{ Goal
+        : "sets" User ||--o{ Receipt : "uploads" User ||--o{ Report :
+        "generates" Account ||--o{ Transaction : "contains" Transaction }o--||
+        Category : "belongs to" Transaction ||--o| Receipt : "attached to"
+        Budget }o--|| Category : "tracks" Budget ||--o{ BudgetAlert : "triggers"
+        Goal ||--o{ GoalProgress : "tracks" %% User Entity User { uuid user_id
+        PK "Primary Key" string name "User full name" string email UK "Unique
+        email" string password_hash "Hashed password" string profile_picture
+        "Avatar URL" datetime created_at "Registration date" datetime last_login
+        "Last access time" } %% Account Entity Account { uuid account_id PK uuid
+        user_id FK "References User" string account_name "e.g., Savings,
+        Checking" string account_type "bank|wallet|credit_card" decimal balance
+        "Current balance" string currency "INR|USD|EUR" boolean is_active
+        "Active status" datetime created_at } %% Transaction Entity Transaction
+        { uuid transaction_id PK uuid user_id FK "References User" uuid
+        account_id FK "References Account" uuid category_id FK "References
+        Category" string type "income|expense" decimal amount "Transaction
+        amount" date transaction_date "Transaction date" string description
+        "Optional note" string payment_method "cash|card|upi" datetime
+        created_at } %% Category Entity Category { uuid category_id PK string
+        name "Salary|Rent|Groceries etc" string type "income|expense" string
+        icon "Icon identifier" string color_code "Hex color" boolean is_default
+        "System category" } %% Receipt Entity (OCR Upload Bill) Receipt { uuid
+        receipt_id PK uuid user_id FK "References User" uuid transaction_id FK
+        "References Transaction" string file_url "Cloud storage path" string
+        file_name "Original filename" string merchant_name "Extracted by OCR"
+        date bill_date "Extracted date" decimal extracted_amount "OCR detected
+        amount" text ocr_raw_text "Full OCR output" string status
+        "pending|processed|failed" datetime uploaded_at } %% Budget Entity
+        Budget { uuid budget_id PK uuid user_id FK "References User" uuid
+        category_id FK "References Category" string budget_name "Monthly
+        Groceries" decimal budget_amount "Limit amount" string period
+        "weekly|monthly|yearly" date period_start "Start date" date period_end
+        "End date" decimal spent_amount "Current spending" boolean is_active
+        "Active status" datetime created_at } %% Budget Alert Entity BudgetAlert
+        { uuid alert_id PK uuid budget_id FK "References Budget" string
+        alert_type "warning|exceeded" decimal threshold_percentage "e.g., 80%"
+        datetime triggered_at boolean is_read "User viewed" } %% Goal Entity
+        Goal { uuid goal_id PK uuid user_id FK "References User" string
+        goal_name "Buy Car|Save for Vacation" decimal target_amount "Goal
+        amount" decimal current_amount "Saved so far" date target_date
+        "Completion deadline" string status "active|completed|cancelled" string
+        icon "Icon identifier" datetime created_at } %% Goal Progress Entity
+        GoalProgress { uuid progress_id PK uuid goal_id FK "References Goal"
+        decimal contribution_amount "Amount added" date contribution_date "Date
+        of contribution" string note "Optional note" datetime created_at } %%
+        Report Entity Report { uuid report_id PK uuid user_id FK "References
+        User" string report_type "spending|income|budget|goal" string
+        export_format "csv|pdf" date period_start "Report start date" date
+        period_end "Report end date" string file_url "Generated file path"
+        datetime generated_at }
+      </div>
+
+      <div
+        style="
+          margin-top: 30px;
+          padding: 20px;
+          background: #f9f9f9;
+          border-radius: 5px;
+        "
+      >
+        <h3>Key Relationships:</h3>
+        <ul>
+          <li>
+            <strong>User → Accounts:</strong> One user can have multiple
+            accounts (Savings, Checking, etc.)
+          </li>
+          <li>
+            <strong>Account → Transactions:</strong> Each account contains
+            multiple transactions
+          </li>
+          <li>
+            <strong>Transaction → Category:</strong> Every transaction belongs
+            to a category
+          </li>
+          <li>
+            <strong>Transaction → Receipt:</strong> Transactions can have
+            OCR-scanned receipts attached
+          </li>
+          <li>
+            <strong>Budget → Category:</strong> Each budget tracks spending for
+            a specific category
+          </li>
+          <li>
+            <strong>Budget → Alerts:</strong> Budgets can trigger multiple
+            alerts (80%, 100% thresholds)
+          </li>
+          <li>
+            <strong>Goal → Progress:</strong> Goals track progress through
+            multiple contributions
+          </li>
+          <li>
+            <strong>User → Reports:</strong> Users can generate multiple
+            analytics reports
+          </li>
+        </ul>
+      </div>
+
+      <div
+        style="
+          margin-top: 20px;
+          padding: 15px;
+          background: #fff3cd;
+          border-radius: 5px;
+          border-left: 4px solid #ffc107;
+        "
+      >
+        <strong>📋 Implementation Notes:</strong>
+        <ul>
+          <li>Use UUID for all primary keys (Supabase default)</li>
+          <li>
+            Category table includes default system categories + user custom
+            categories
+          </li>
+          <li>Receipt OCR processing uses Python ML/FastAPI backend</li>
+          <li>Reports are generated on-demand and stored temporarily</li>
+          <li>Budget alerts auto-trigger when spending exceeds thresholds</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

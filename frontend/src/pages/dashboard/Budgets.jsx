@@ -16,10 +16,16 @@ import { AlertTriangle, AlertCircle, Plus, Trash2, Wallet, TrendingDown, PiggyBa
 // Mock data: Budget categories
 const CATEGORIES = [
   { value: "food", label: "Food & Groceries", icon: "🍽️" },
-  { value: "transport", label: "Transportation", icon: "🚗" },
+  { value: "transport", label: "Transport", icon: "🚗" },
+  { value: "bills", label: "Bills & Utilities", icon: "💡" },
+  { value: "rent", label: "Rent", icon: "🏠" },
   { value: "shopping", label: "Shopping", icon: "🛍️" },
-  { value: "bills", label: "Bills & Utilities", icon: "📄" },
   { value: "entertainment", label: "Entertainment", icon: "🎮" },
+  { value: "healthcare", label: "Healthcare", icon: "🏥" },
+  { value: "education", label: "Education", icon: "📚" },
+  { value: "emi", label: "EMI / Loans", icon: "💳" },
+  { value: "savings", label: "Savings & Investments", icon: "💰" },
+  { value: "others", label: "Others", icon: "📦" },
 ];
 
 // Mock data: Initial budgets
@@ -38,6 +44,7 @@ export default function Budgets() {
     type: "Monthly",
     category: "",
     amount: "",
+    otherDescription: "",
   });
 
   // Calculate totals
@@ -98,16 +105,23 @@ export default function Budgets() {
       return;
     }
 
+    // Validate Others category description
+    if (formData.category === "others" && !formData.otherDescription.trim()) {
+      alert("Please provide a description for Others category");
+      return;
+    }
+
     const newBudget = {
       id: Date.now(),
       category: formData.category,
       type: formData.type,
       amount: parseFloat(formData.amount),
       spent: 0, // Initial spent is 0
+      otherDescription: formData.category === "others" ? formData.otherDescription : undefined,
     };
 
     setBudgets((prev) => [...prev, newBudget]);
-    setFormData({ type: "Monthly", category: "", amount: "" });
+    setFormData({ type: "Monthly", category: "", amount: "", otherDescription: "" });
   };
 
   // Handle delete budget
@@ -181,6 +195,20 @@ export default function Budgets() {
                 />
               </div>
             </div>
+
+            {/* Others Category Description - Only shown when Others is selected */}
+            {formData.category === "others" && (
+              <div className="space-y-2">
+                <Label htmlFor="otherDescription">Describe Others Category</Label>
+                <Input
+                  id="otherDescription"
+                  type="text"
+                  placeholder="E.g., Pet care, Gifts, Hobbies, etc."
+                  value={formData.otherDescription}
+                  onChange={(e) => handleChange("otherDescription", e.target.value)}
+                />
+              </div>
+            )}
 
             <Button type="submit" className="w-full md:w-auto">
               <Plus className="w-4 h-4 mr-2" />
@@ -314,7 +342,12 @@ export default function Budgets() {
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{getCategoryIcon(budget.category)}</span>
                         <div>
-                          <h3 className="font-semibold">{getCategoryLabel(budget.category)}</h3>
+                          <h3 className="font-semibold">
+                            {getCategoryLabel(budget.category)}
+                            {budget.category === "others" && budget.otherDescription && (
+                              <span className="text-sm font-normal text-muted-foreground ml-2">({budget.otherDescription})</span>
+                            )}
+                          </h3>
                           <p className="text-sm text-muted-foreground">{budget.type} Budget</p>
                         </div>
                       </div>
