@@ -71,13 +71,71 @@ export default function Landing() {
       <Navbar />
 
       {/* ============ HERO SECTION ============ */}
-      <section className="py-16 md:py-24 px-4 relative overflow-hidden">
+      <section className="py-20 md:py-32 px-4 relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-30" />
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
 
-        <div className="container mx-auto relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
+        {/* Floating Cards - Left Side */}
+        <div className="hidden lg:block absolute left-8 top-1/4 animate-float">
+          <Card className="glass p-4 w-48 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <PieChart className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">This Month</p>
+                <p className="text-lg font-bold text-foreground">₹45,230</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="hidden lg:block absolute left-16 bottom-1/4 animate-float" style={{ animationDelay: '1s' }}>
+          <Card className="glass p-4 w-44 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <Target className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Savings</p>
+                <p className="text-sm font-semibold text-emerald-600">+₹12,000</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Floating Cards - Right Side */}
+        <div className="hidden lg:block absolute right-8 top-1/3 animate-float" style={{ animationDelay: '0.5s' }}>
+          <Card className="glass p-4 w-44 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Receipt className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Scanned</p>
+                <p className="text-lg font-bold text-foreground">156</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="hidden lg:block absolute right-12 bottom-1/3 animate-float" style={{ animationDelay: '1.5s' }}>
+          <Card className="glass p-4 w-48 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Gauge className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Budget</p>
+                <p className="text-sm font-semibold text-primary">82% on track</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="container mx-auto relative z-10 max-w-5xl">
+          <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">
               <Zap className="w-4 h-4" />
               <span className="text-sm font-medium">AI-Powered Financial Planning</span>
@@ -92,17 +150,15 @@ export default function Landing() {
               Built for the modern financial planner.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/dashboard">
-                <Button variant="hero" size="lg" className="group">
-                  Launch Dashboard
+            <div className="flex flex-col items-center justify-center gap-4">
+              <Link to="/auth?mode=signup">
+                <Button variant="hero" size="lg" className="group bg-emerald-600 hover:bg-emerald-700">
+                  Get Started Free
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <Link to="/auth?mode=signup">
-                <Button variant="outline" size="lg">
-                  Sign Up Free
-                </Button>
+              <Link to="/auth?mode=login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Already have an account? <span className="font-medium underline">Sign In</span>
               </Link>
             </div>
           </div>
@@ -113,7 +169,10 @@ export default function Landing() {
       <section id="features" className="py-16 md:py-24 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-2">Core Technologies & Features</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Everything you need to take control of your financial future
+            </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">

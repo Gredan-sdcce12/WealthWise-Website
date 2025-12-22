@@ -18,10 +18,10 @@ export function Navbar() {
           <a href="/#pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
         </div> */}
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost">
+          <Button asChild variant="outline" size="sm" className="hover:-translate-y-0.5 transition-transform">
             <Link to="/auth">Sign In</Link>
           </Button>
-          <Button asChild variant="hero">
+          <Button asChild variant="hero" size="default">
             <Link to="/auth?mode=signup">Get Started</Link>
           </Button>
         </div>
