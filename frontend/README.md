@@ -1,14 +1,34 @@
 # WealthWise-Website
 
+# Vite + React + shadcn/ui Starter
+
 Short description...
 
+## Supabase Setup
+
+- Add env vars: create `.env` from `.env.example` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from your Supabase project.
+- Initialize client once: see [src/lib/supabase.js](src/lib/supabase.js).
+- Usage: import the client and call auth/data methods.
+
+Example:
+
+```ts
+import { supabase } from "@/lib/supabase";
+
+async function signInWithEmail(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+```
+
 ## Setup
+
 1. `npm install`
 2. `npm run dev`
-
-
-
-
 
 <!-- # Welcome to your Lovable project
 

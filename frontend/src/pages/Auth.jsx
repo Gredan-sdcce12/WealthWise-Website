@@ -6,39 +6,102 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Wallet, Mail, Lock, User, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(searchParams.get("mode") !== "signup");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // Inline auth messaging for beginner-friendly UX
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate auth process
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (isLogin) {
-      toast.success("Welcome back!");
-    } else {
-      toast.success("Account created successfully!");
+
+    if (!isLogin && formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
     }
-    
-    setIsLoading(false);
-    navigate("/dashboard");
+
+    // Clear any previous messages when submitting
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsLoading(true);
+    try {
+      if (isLogin) {
+        // SIGN IN: email/password via Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (error) {
+          // Generic invalid credentials message
+          setErrorMessage("Invalid email or password");
+          return;
+        }
+
+        toast.success("Welcome back!");
+        navigate("/dashboard");
+      } else {
+        // SIGN UP: create account with Supabase Auth
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        // Supabase returns an error when the email is already registered.
+        // In some cases (e.g., email confirmation pending), `error` can be null
+        // but `data.user.identities` will be empty, which also indicates the user exists.
+        const userExists = data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0;
+
+        if (error || userExists) {
+          const msg = (error?.message || "").toLowerCase();
+          const isAlreadyRegistered = msg.includes("already registered") || error?.status === 400 || userExists;
+
+          if (isAlreadyRegistered) {
+            // Strict duplicate handling: do not register again; stay on Sign Up and show error
+            setErrorMessage("This email is already registered. Please Sign in instead.");
+            return;
+          }
+
+          setErrorMessage(error?.message || "Sign up failed");
+          return;
+        }
+
+        // Success: account created; guide user to verify email before sign-in
+        setSuccessMessage(
+          "Account created successfully! Please check your email and confirm your sign-up before logging in."
+        );
+        // Keep user on sign-up view; they can switch to Sign In after confirming
+      }
+    } catch (err) {
+      setErrorMessage("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    // Clear messages when switching modes
+    setErrorMessage("");
+    setSuccessMessage("");
   };
 
   return (
@@ -180,12 +243,54 @@ export default function Auth() {
                   </div>
                 </div>
 
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        className="pl-10 pr-10"
+                        variant="emerald"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {isLogin && (
                   <div className="flex items-center justify-end">
                     <a href="#" className="text-sm text-primary hover:underline">
                       Forgot password?
                     </a>
                   </div>
+                )}
+
+                {isLogin && (
+                  <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Lock className="w-4 h-4 text-primary/80" />
+                    Your data is securely encrypted
+                  </p>
+                )}
+
+                {/* Inline auth feedback */}
+                {errorMessage && (
+                  <p className="text-sm text-red-600" role="alert">{errorMessage}</p>
+                )}
+                {successMessage && (
+                  <p className="text-sm text-green-600" role="status">{successMessage}</p>
                 )}
 
                 <Button 
@@ -195,7 +300,13 @@ export default function Auth() {
                   size="lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
+                  {isLoading
+                    ? isLogin
+                      ? "Signing in..."
+                      : "Creating account..."
+                    : isLogin
+                      ? "Sign In"
+                      : "Create Account"}
                 </Button>
 
                 <div className="relative my-6">
@@ -234,7 +345,7 @@ export default function Auth() {
                 {isLogin ? "Don't have an account? " : "Already have an account? "}
                 <button
                   type="button"
-                  onClick={() => setIsLogin(!isLogin)}
+                  onClick={toggleMode}
                   className="text-primary hover:underline font-medium"
                 >
                   {isLogin ? "Sign up" : "Sign in"}
