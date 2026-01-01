@@ -414,7 +414,7 @@ export default function Transactions() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleEdit(transaction)}
+                          onClick={() => handleEdit(transaction)}git 
                           className="hover:bg-blue-100 hover:text-blue-600"
                         >
                           <Edit2 className="w-4 h-4" />

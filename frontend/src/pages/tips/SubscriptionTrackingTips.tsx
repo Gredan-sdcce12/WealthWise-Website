@@ -39,10 +39,10 @@ const tips = [
 ];
 
 const subscriptionStats = [
-  { stat: "$273", label: "Average monthly spend on subscriptions" },
+  { stat: "₹273", label: "Average monthly spend on subscriptions" },
   { stat: "12", label: "Average number of active subscriptions" },
   { stat: "84%", label: "Of people underestimate their subscription costs" },
-  { stat: "$200+", label: "Potential monthly savings from audit" }
+  { stat: "₹200+", label: "Potential monthly savings from audit" }
 ];
 
 export default function SubscriptionTrackingTips() {
@@ -71,7 +71,7 @@ export default function SubscriptionTrackingTips() {
             <CardContent className="p-6">
               <h2 className="text-lg font-semibold mb-2">The Subscription Creep</h2>
               <p className="text-muted-foreground">
-                The average person spends over $200/month on subscriptions they don't fully use. 
+                The average person spends over ₹200/month on subscriptions they don't fully use. 
                 From streaming services to software tools, these small charges add up to thousands per year.
               </p>
             </CardContent>

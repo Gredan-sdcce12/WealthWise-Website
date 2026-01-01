@@ -67,15 +67,9 @@ export default function DashboardHome() {
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Welcome Section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Good morning, John! 👋</h1>
-          <p className="text-muted-foreground mt-1">Here's your financial overview for today.</p>
-        </div>
-        <div className="flex gap-3">
-          <AddTransactionDialog />
-          <ScanReceiptDialog />
-        </div>
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold">Good morning, John! 👋</h1>
+        <p className="text-muted-foreground">Here's your financial overview for today.</p>
       </div>
 
       {/* Stats Cards */}
@@ -238,7 +232,7 @@ export default function DashboardHome() {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
                     <span className="text-muted-foreground">{category.name}</span>
                   </div>
-                  <span className="font-medium">${category.value}</span>
+                  <span className="font-medium">₹{category.value}</span>
                 </div>
               ))}
             </div>
@@ -275,7 +269,7 @@ export default function DashboardHome() {
                   <span className={`font-semibold ${
                     transaction.type === "income" ? "text-emerald-600" : "text-destructive"
                   }`}>
-                    {transaction.type === "income" ? "+" : ""}${Math.abs(transaction.amount).toFixed(2)}
+                    {transaction.type === "income" ? "+" : ""}₹{Math.abs(transaction.amount).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -302,7 +296,7 @@ export default function DashboardHome() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-semibold">${bill.amount.toFixed(2)}</span>
+                    <span className="font-semibold">₹{bill.amount.toFixed(2)}</span>
                     <Button variant="outline" size="sm" className="ml-3">Pay</Button>
                   </div>
                 </div>

@@ -15,6 +15,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isOAuthLoading, setIsOAuthLoading] = useState(false);
   // Inline auth messaging for beginner-friendly UX
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -95,6 +96,32 @@ export default function Auth() {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleGoogleAuth = async () => {
+    // Prevent concurrent flows
+    if (isOAuthLoading || isLoading) return;
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsOAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message || "Google sign-in failed");
+      }
+      // On success, Supabase will handle the redirect
+    } catch (err) {
+      setErrorMessage("Google sign-in failed. Please try again.");
+    } finally {
+      setIsOAuthLoading(false);
+    }
   };
 
   const toggleMode = () => {
@@ -318,7 +345,14 @@ export default function Auth() {
                   </div>
                 </div>
 
-                <Button type="button" variant="outline" className="w-full" size="lg">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                  onClick={handleGoogleAuth}
+                  disabled={isOAuthLoading || isLoading}
+                >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -337,7 +371,7 @@ export default function Auth() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  Google
+                  {isOAuthLoading ? "Connecting..." : "Continue with Google"}
                 </Button>
               </form>
 

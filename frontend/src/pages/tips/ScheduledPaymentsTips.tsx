@@ -39,7 +39,7 @@ const tips = [
 ];
 
 const scheduleTypes = [
-  { type: "Daily", useCase: "Small savings transfers", example: "$5/day to savings" },
+  { type: "Daily", useCase: "Small savings transfers", example: "₹5/day to savings" },
   { type: "Weekly", useCase: "Groceries, gas budget", example: "Weekly allowance" },
   { type: "Bi-weekly", useCase: "Matching paycheck cycles", example: "Rent split" },
   { type: "Monthly", useCase: "Bills, subscriptions", example: "Rent, utilities" },

@@ -18,7 +18,7 @@ const tips = [
   },
   {
     title: "Break Down Large Goals",
-    description: "A $50,000 goal feels overwhelming. A $400/month contribution feels achievable. Same goal, different mindset.",
+    description: "A ₹50,000 goal feels overwhelming. A ₹400/month contribution feels achievable. Same goal, different mindset.",
     icon: Calendar
   },
   {
@@ -39,10 +39,10 @@ const tips = [
 ];
 
 const goalExamples = [
-  { name: "Emergency Fund", target: "$10,000", timeline: "12-18 months", priority: "High" },
-  { name: "Vacation", target: "$3,000", timeline: "6-9 months", priority: "Medium" },
-  { name: "New Car Down Payment", target: "$5,000", timeline: "12 months", priority: "Medium" },
-  { name: "Home Down Payment", target: "$50,000", timeline: "3-5 years", priority: "Long-term" }
+  { name: "Emergency Fund", target: "₹10,000", timeline: "12-18 months", priority: "High" },
+  { name: "Vacation", target: "₹3,000", timeline: "6-9 months", priority: "Medium" },
+  { name: "New Car Down Payment", target: "₹5,000", timeline: "12 months", priority: "Medium" },
+  { name: "Home Down Payment", target: "₹50,000", timeline: "3-5 years", priority: "Long-term" }
 ];
 
 export default function FinancialGoalsTips() {

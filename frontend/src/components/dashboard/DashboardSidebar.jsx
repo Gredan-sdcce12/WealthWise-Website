@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -62,17 +62,17 @@ export function DashboardSidebar({ collapsed, onToggle }) {
       {/* Header */}
       <div className={cn("h-16 flex items-center border-b border-sidebar-border px-4", collapsed ? "justify-center" : "justify-between")}>
         {!collapsed && (
-          <div className="flex items-center gap-2">
+          <Link to="/dashboard" reloadDocument className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl gradient-emerald flex items-center justify-center">
               <Wallet className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="font-bold text-lg text-sidebar-foreground">WealthWise</span>
-          </div>
+          </Link>
         )}
         {collapsed && (
-          <div className="w-9 h-9 rounded-xl gradient-emerald flex items-center justify-center">
+          <Link to="/dashboard" reloadDocument className="w-9 h-9 rounded-xl gradient-emerald flex items-center justify-center">
             <Wallet className="w-5 h-5 text-primary-foreground" />
-          </div>
+          </Link>
         )}
       </div>
 

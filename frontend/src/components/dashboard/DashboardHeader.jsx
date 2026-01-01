@@ -1,6 +1,5 @@
-import { Bell, Search, Plus, User } from "lucide-react";
+import { Bell, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,34 +10,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function DashboardHeader() {
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // Header simplified: remove search and date for a decluttered look
 
   return (
-    <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30">
-      <div className="h-full px-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search transactions, budgets..."
-              className="w-80 pl-10"
-              variant="glass"
-            />
-          </div>
-          <span className="text-sm text-muted-foreground hidden lg:block">{currentDate}</span>
-        </div>
-
+    <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-30">
+      <div className="h-full px-4 flex items-center justify-end">
         <div className="flex items-center gap-3">
-          <Button variant="hero" size="sm" className="hidden sm:flex">
-            <Plus className="w-4 h-4 mr-1" />
-            Add Transaction
-          </Button>
-
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-5 h-5" />
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-medium flex items-center justify-center">
