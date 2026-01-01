@@ -13,17 +13,17 @@ import {
 import { Trash2, TrendingUp, TrendingDown, Plus, Edit2 } from "lucide-react";
 
 const categories = [
-  { value: "salary", label: "Salary" },
-  { value: "freelance", label: "Freelance" },
-  { value: "investment", label: "Investment" },
-  { value: "groceries", label: "Groceries" },
-  { value: "rent", label: "Rent" },
-  { value: "utilities", label: "Utilities" },
-  { value: "transportation", label: "Transportation" },
-  { value: "entertainment", label: "Entertainment" },
-  { value: "shopping", label: "Shopping" },
-  { value: "healthcare", label: "Healthcare" },
-  { value: "other", label: "Other" },
+  { value: "food", label: "Food & Groceries", icon: "🍽️" },
+  { value: "transport", label: "Transport", icon: "🚗" },
+  { value: "bills", label: "Bills & Utilities", icon: "💡" },
+  { value: "rent", label: "Rent", icon: "🏠" },
+  { value: "shopping", label: "Shopping", icon: "🛍️" },
+  { value: "entertainment", label: "Entertainment", icon: "🎮" },
+  { value: "healthcare", label: "Healthcare", icon: "🏥" },
+  { value: "education", label: "Education", icon: "📚" },
+  { value: "emi", label: "EMI / Loans", icon: "💳" },
+  { value: "savings", label: "Savings & Investments", icon: "💰" },
+  { value: "others", label: "Others", icon: "📦" },
 ];
 
 export default function Transactions() {
@@ -272,16 +272,10 @@ export default function Transactions() {
 
               <div className="space-y-2">
                 <Label htmlFor="type">Type <span className="text-red-500">*</span></Label>
-                <Select value={formData.type} onValueChange={(value) => handleChange("type", value)}>
-                  <SelectTrigger className={errors.type ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white text-gray-900 shadow-lg">
-                    <SelectItem value="income" className="text-gray-900 hover:bg-gray-100">Income</SelectItem>
-                    <SelectItem value="expense" className="text-gray-900 hover:bg-gray-100">Expense</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.type && <p className="text-sm text-red-500">{errors.type}</p>}
+                <div className="w-full min-w-[260px] h-11 rounded-lg border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 flex items-center px-3 text-foreground shadow-[0_6px_18px_-12px_rgba(16,185,129,0.55)]">
+                  <span className="text-sm font-medium">Expense</span>
+                  <input type="hidden" value="expense" onChange={(e) => handleChange("type", e.target.value)} />
+                </div>
               </div>
             </div>
 
@@ -289,13 +283,13 @@ export default function Transactions() {
               <div className="space-y-2 relative z-[9999]">
                 <Label htmlFor="category">Category <span className="text-red-500">*</span></Label>
                 <Select value={formData.category} onValueChange={(value) => handleChange("category", value)}>
-                  <SelectTrigger className={`${errors.category ? "border-red-500" : ""} relative z-[9999]`}>
+                  <SelectTrigger className={`w-full min-w-[260px] h-11 rounded-lg border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 hover:border-emerald-400 focus:ring-2 focus:ring-emerald-200 text-foreground shadow-[0_6px_18px_-12px_rgba(16,185,129,0.55)] relative z-[9999] ${errors.category ? "border-red-500" : ""}`}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-white text-gray-900 shadow-lg">
+                  <SelectContent className="z-[9999] bg-white text-gray-900 shadow-xl border border-emerald-100">
                     {categories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value} className="text-gray-900 hover:bg-gray-100">
-                        {cat.label}
+                      <SelectItem key={cat.value} value={cat.value} className="text-gray-900 data-[highlighted]:bg-emerald-100 [&_svg]:hidden">
+                        {cat.icon} {cat.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

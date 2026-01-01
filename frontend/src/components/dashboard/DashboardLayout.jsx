@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { DashboardSidebar } from "./DashboardSidebar";
-import { DashboardHeader } from "./DashboardHeader";
 import { cn } from "@/lib/utils";
 
 export function DashboardLayout() {
@@ -20,7 +19,6 @@ export function DashboardLayout() {
           sidebarCollapsed ? "ml-[70px]" : "ml-[260px]"
         )}
       >
-        <DashboardHeader />
         <main className="p-6">
           <Outlet />
         </main>

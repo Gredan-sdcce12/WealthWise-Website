@@ -140,7 +140,7 @@ export default function Budgets() {
       </div>
 
       {/* ====== BUDGET SETUP SECTION ====== */}
-      <Card variant="elevated">
+      <Card variant="default" className="shadow-lg">
         <CardContent className="p-6">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <Plus className="w-5 h-5" />
@@ -152,14 +152,14 @@ export default function Budgets() {
               <div className="space-y-2">
                 <Label htmlFor="type">Budget Type</Label>
                 <Select value={formData.type} onValueChange={(value) => handleChange("type", value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full min-w-[260px] h-11 rounded-lg border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 hover:border-emerald-400 focus:ring-2 focus:ring-emerald-200 text-foreground shadow-[0_6px_18px_-12px_rgba(16,185,129,0.55)]">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white text-gray-900 shadow-lg">
-                    <SelectItem value="Weekly" className="text-gray-900 hover:bg-gray-100">
+                  <SelectContent className="bg-white text-gray-900 shadow-xl border border-emerald-100">
+                    <SelectItem value="Weekly" className="text-gray-900 data-[highlighted]:bg-emerald-100 [&_svg]:hidden">
                       Weekly
                     </SelectItem>
-                    <SelectItem value="Monthly" className="text-gray-900 hover:bg-gray-100">
+                    <SelectItem value="Monthly" className="text-gray-900 data-[highlighted]:bg-emerald-100 [&_svg]:hidden">
                       Monthly
                     </SelectItem>
                   </SelectContent>
@@ -170,12 +170,12 @@ export default function Budgets() {
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select value={formData.category} onValueChange={(value) => handleChange("category", value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full min-w-[260px] h-11 rounded-lg border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 hover:border-emerald-400 focus:ring-2 focus:ring-emerald-200 text-foreground shadow-[0_6px_18px_-12px_rgba(16,185,129,0.55)]">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white text-gray-900 shadow-lg">
+                  <SelectContent className="bg-white text-gray-900 shadow-xl border border-emerald-100">
                     {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value} className="text-gray-900 hover:bg-gray-100">
+                      <SelectItem key={cat.value} value={cat.value} className="flex items-center gap-2 text-gray-900 data-[highlighted]:bg-emerald-100 [&_svg]:hidden">
                         {cat.icon} {cat.label}
                       </SelectItem>
                     ))}
