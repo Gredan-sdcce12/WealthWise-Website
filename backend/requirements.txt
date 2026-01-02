@@ -1,0 +1,10 @@
+# fastapi
+# uvicorn
+# psycopg2-binary
+# python-dotenv
+
+📦 Install required packages
+
+In terminal:
+
+pip install fastapi uvicorn psycopg2-binary python-dotenv
