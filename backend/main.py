@@ -3,9 +3,13 @@
 from fastapi import FastAPI, HTTPException
 
 from database import get_db_connection
+from income import router as income_router
 
 
 app = FastAPI(title="WealthWise Backend")
+
+# Register routers
+app.include_router(income_router)
 
 
 @app.get("/")
