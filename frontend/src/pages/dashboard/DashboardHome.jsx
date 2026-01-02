@@ -24,11 +24,11 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { AddTransactionDialog } from "@/components/dialogs/AddTransactionDialog";
 import { ScanReceiptDialog } from "@/components/dialogs/ScanReceiptDialog";
 import { AddExpenseDialog } from "@/components/dialogs/AddExpenseDialog";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
 import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
+import { AddIncomeDialog } from "@/components/dialogs/AddIncomeDialog";
 
 
 
@@ -67,9 +67,20 @@ export default function DashboardHome() {
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Welcome Section */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold">Good morning, John! 👋</h1>
-        <p className="text-muted-foreground">Here's your financial overview for today.</p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold">Good morning, John! 👋</h1>
+          <p className="text-muted-foreground">Here's your financial overview for today.</p>
+        </div>
+        <AddIncomeDialog
+          allowUsePrevious
+          trigger={(
+            <Button variant="hero" size="sm" className="flex items-center gap-2">
+              <ArrowUpRight className="w-4 h-4" />
+              Add income
+            </Button>
+          )}
+        />
       </div>
 
       {/* Stats Cards */}
@@ -315,7 +326,8 @@ export default function DashboardHome() {
               <p className="text-muted-foreground">Manage your finances with one click</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <AddTransactionDialog
+              <AddIncomeDialog
+                allowUsePrevious
                 trigger={
                   <Button variant="hero" size="sm">
                     <ArrowUpRight className="w-4 h-4 mr-1" />
