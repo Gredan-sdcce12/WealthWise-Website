@@ -317,52 +317,6 @@ export default function DashboardHome() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card variant="emerald">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold">Quick Actions</h3>
-              <p className="text-muted-foreground">Manage your finances with one click</p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <AddIncomeDialog
-                allowUsePrevious
-                trigger={
-                  <Button variant="hero" size="sm">
-                    <ArrowUpRight className="w-4 h-4 mr-1" />
-                    Add Income
-                  </Button>
-                }
-              />
-              <AddExpenseDialog
-                trigger={
-                  <Button variant="secondary" size="sm">
-                    <CreditCard className="w-4 h-4 mr-1" />
-                    Add Expense
-                  </Button>
-                }
-              />
-              <AddGoalDialog
-                trigger={
-                  <Button variant="secondary" size="sm">
-                    <PiggyBank className="w-4 h-4 mr-1" />
-                    New Goal
-                  </Button>
-                }
-              />
-              <AddBudgetDialog
-                trigger={
-                  <Button variant="secondary" size="sm">
-                    <Wallet className="w-4 h-4 mr-1" />
-                    New Budget
-                  </Button>
-                }
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -1,12 +1,22 @@
 """FastAPI entrypoint for WealthWise backend."""
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from database import get_db_connection
 from income import router as income_router
 
 
 app = FastAPI(title="WealthWise Backend")
+
+# CORS for frontend apps
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
+)
 
 # Register routers
 app.include_router(income_router)
