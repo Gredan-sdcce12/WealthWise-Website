@@ -17,6 +17,7 @@ export function AddIncomeDialog({
   allowUsePrevious = false,
   onSubmit,
   onUsePrevious,
+  previousIncome = null,
   loading = false,
 }) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -48,6 +49,15 @@ export function AddIncomeDialog({
       console.warn("Unable to load previous income", err);
     }
   }, []);
+
+  useEffect(() => {
+    if (previousIncome && previousIncome.amount !== undefined) {
+      setLastIncome({
+        amount: previousIncome.amount,
+        frequency: previousIncome.income_type || previousIncome.frequency || "monthly",
+      });
+    }
+  }, [previousIncome]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -123,7 +133,9 @@ export function AddIncomeDialog({
             <div className="flex items-center justify-between rounded-lg border border-dashed p-3">
               <div>
                 <p className="text-sm font-medium">Use previous income</p>
-                <p className="text-xs text-muted-foreground">One-tap fill from your last entry.</p>
+                <p className="text-xs text-muted-foreground">
+                  {lastIncome ? `Last: ₹${lastIncome.amount} (${lastIncome.frequency})` : "One-tap fill from your last entry."}
+                </p>
               </div>
               <Button type="button" size="sm" variant="outline" onClick={applyPreviousIncome} disabled={!hasPrevious || isBusy}>
                 Same as previous

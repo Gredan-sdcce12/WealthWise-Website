@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -29,6 +31,9 @@ import { AddExpenseDialog } from "@/components/dialogs/AddExpenseDialog";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
 import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
 import { AddIncomeDialog } from "@/components/dialogs/AddIncomeDialog";
+import { supabase } from "@/lib/supabase";
+
+const API_BASE = "http://127.0.0.1:8000";
 
 
 
@@ -64,6 +69,59 @@ const upcomingBills = [
 ];
 
 export default function DashboardHome() {
+  const outletCtx = useOutletContext?.() || {};
+  const {
+    latestIncome: sharedIncome,
+    allowUsePrevious: sharedAllowUsePrevious,
+    handleSaveIncome: sharedSaveIncome,
+    handleCopyPrevious: sharedCopyIncome,
+    isSavingIncome: sharedSaving,
+  } = outletCtx;
+
+  const [latestIncome, setLatestIncome] = useState(null);
+  const [isLoadingIncome, setIsLoadingIncome] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    if (sharedIncome) {
+      setLatestIncome(sharedIncome);
+      setIsLoadingIncome(false);
+      return;
+    }
+
+    const fetchLatestIncome = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!active) return;
+        const uid = data?.session?.user?.id;
+        if (!uid) {
+          setIsLoadingIncome(false);
+          return;
+        }
+
+        const res = await fetch(`${API_BASE}/income/latest/${uid}`);
+        if (!res.ok) throw new Error(`Income fetch failed (${res.status})`);
+        const body = await res.json();
+        if (body?.amount !== null && body?.amount !== undefined) {
+          setLatestIncome(body);
+        }
+      } catch (err) {
+        console.warn("Unable to load income", err);
+      } finally {
+        if (active) setIsLoadingIncome(false);
+      }
+    };
+
+    fetchLatestIncome();
+    return () => {
+      active = false;
+    };
+  }, [sharedIncome]);
+
+  const incomeAmount = latestIncome?.amount ?? 0;
+  const incomeType = latestIncome?.income_type ?? "monthly";
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Welcome Section */}
@@ -73,7 +131,11 @@ export default function DashboardHome() {
           <p className="text-muted-foreground">Here's your financial overview for today.</p>
         </div>
         <AddIncomeDialog
-          allowUsePrevious
+          allowUsePrevious={Boolean(sharedAllowUsePrevious)}
+          onSubmit={sharedSaveIncome}
+          onUsePrevious={sharedAllowUsePrevious ? sharedCopyIncome : undefined}
+          previousIncome={sharedIncome || latestIncome}
+          loading={Boolean(sharedSaving)}
           trigger={(
             <Button variant="hero" size="sm" className="flex items-center gap-2">
               <ArrowUpRight className="w-4 h-4" />
@@ -107,11 +169,13 @@ export default function DashboardHome() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Rauls Monthly Income</p>
-                <p className="text-2xl font-bold mt-1">₹6,050.00</p>
-                <div className="flex items-center gap-1 mt-2 text-sm text-emerald-600">
-                  <ArrowUpRight className="w-4 h-4" />
-                  <span>+8.2%</span>
+                <p className="text-sm text-muted-foreground">Monthly Income</p>
+                <p className="text-2xl font-bold mt-1">
+                  {isLoadingIncome ? "..." : `₹${incomeAmount.toFixed(2)}`}
+                </p>
+                <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
+                  <span className="capitalize">{incomeType}</span>
+                  {latestIncome && <span>• Last saved</span>}
                 </div>
               </div>
               <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">

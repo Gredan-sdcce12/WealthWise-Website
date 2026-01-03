@@ -13,6 +13,7 @@ export function DashboardLayout() {
   const [showIncomePrompt, setShowIncomePrompt] = useState(false);
   const [allowUsePrevious, setAllowUsePrevious] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [latestIncome, setLatestIncome] = useState(null);
   const [isSavingIncome, setIsSavingIncome] = useState(false);
 
   useEffect(() => {
@@ -32,6 +33,9 @@ export function DashboardLayout() {
         }
         const body = await res.json();
         const hasIncome = body?.amount !== null && body?.amount !== undefined;
+        if (hasIncome) {
+          setLatestIncome(body);
+        }
         setAllowUsePrevious(hasIncome);
         setShowIncomePrompt(true);
       } catch (err) {
@@ -65,6 +69,8 @@ export function DashboardLayout() {
           const detail = await res.text();
           throw new Error(detail || "Request failed");
         }
+        const created = await res.json();
+        setLatestIncome(created);
         setAllowUsePrevious(true);
         setShowIncomePrompt(false);
         toast({ title: "Income saved", description: "You're good to go." });
@@ -89,6 +95,8 @@ export function DashboardLayout() {
         const detail = await res.text();
         throw new Error(detail || "Request failed");
       }
+      const created = await res.json();
+      setLatestIncome(created);
       setAllowUsePrevious(true);
       setShowIncomePrompt(false);
       toast({ title: "Income copied", description: "Using your previous income." });
@@ -114,7 +122,15 @@ export function DashboardLayout() {
         )}
       >
         <main className="p-6">
-          <Outlet />
+          <Outlet
+            context={{
+              latestIncome,
+              allowUsePrevious,
+              handleSaveIncome,
+              handleCopyPrevious,
+              isSavingIncome,
+            }}
+          />
         </main>
       </div>
 
@@ -124,6 +140,7 @@ export function DashboardLayout() {
         allowUsePrevious={allowUsePrevious}
         onSubmit={handleSaveIncome}
         onUsePrevious={allowUsePrevious ? handleCopyPrevious : undefined}
+        previousIncome={latestIncome}
         loading={isSavingIncome}
       />
     </div>
