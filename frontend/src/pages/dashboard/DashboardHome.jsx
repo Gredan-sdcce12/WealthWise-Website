@@ -76,17 +76,19 @@ export default function DashboardHome() {
     handleSaveIncome: sharedSaveIncome,
     handleCopyPrevious: sharedCopyIncome,
     isSavingIncome: sharedSaving,
+    monthlyIncomeTotal: sharedMonthlyIncomeTotal,
+    isLoadingIncomeTotal: sharedLoadingMonthlyIncome,
   } = outletCtx;
 
   const [latestIncome, setLatestIncome] = useState(null);
-  const [isLoadingIncome, setIsLoadingIncome] = useState(true);
+  const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
+  const [isLoadingMonthlyTotal, setIsLoadingMonthlyTotal] = useState(true);
 
   useEffect(() => {
     let active = true;
 
     if (sharedIncome) {
       setLatestIncome(sharedIncome);
-      setIsLoadingIncome(false);
       return;
     }
 
@@ -96,7 +98,6 @@ export default function DashboardHome() {
         if (!active) return;
         const uid = data?.session?.user?.id;
         if (!uid) {
-          setIsLoadingIncome(false);
           return;
         }
 
@@ -108,8 +109,6 @@ export default function DashboardHome() {
         }
       } catch (err) {
         console.warn("Unable to load income", err);
-      } finally {
-        if (active) setIsLoadingIncome(false);
       }
     };
 
@@ -119,8 +118,47 @@ export default function DashboardHome() {
     };
   }, [sharedIncome]);
 
-  const incomeAmount = latestIncome?.amount ?? 0;
+  useEffect(() => {
+    let active = true;
+
+    if (sharedMonthlyIncomeTotal !== undefined && sharedMonthlyIncomeTotal !== null) {
+      setMonthlyIncomeTotal(sharedMonthlyIncomeTotal);
+      setIsLoadingMonthlyTotal(Boolean(sharedLoadingMonthlyIncome));
+      return () => {
+        active = false;
+      };
+    }
+
+    const fetchMonthlyIncomeTotal = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!active) return;
+        const uid = data?.session?.user?.id;
+        if (!uid) {
+          setIsLoadingMonthlyTotal(false);
+          return;
+        }
+
+        const res = await fetch(`${API_BASE}/income/total/${uid}`);
+        if (!res.ok) throw new Error(`Income total fetch failed (${res.status})`);
+        const body = await res.json();
+        setMonthlyIncomeTotal(typeof body.total === "number" ? body.total : 0);
+      } catch (err) {
+        console.warn("Unable to load monthly income total", err);
+      } finally {
+        if (active) setIsLoadingMonthlyTotal(false);
+      }
+    };
+
+    fetchMonthlyIncomeTotal();
+    return () => {
+      active = false;
+    };
+  }, [sharedLoadingMonthlyIncome, sharedMonthlyIncomeTotal]);
+
+  const incomeAmount = sharedMonthlyIncomeTotal ?? monthlyIncomeTotal ?? 0;
   const incomeType = latestIncome?.income_type ?? "monthly";
+  const loadingIncome = sharedLoadingMonthlyIncome ?? isLoadingMonthlyTotal;
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -171,7 +209,7 @@ export default function DashboardHome() {
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Income</p>
                 <p className="text-2xl font-bold mt-1">
-                  {isLoadingIncome ? "..." : `₹${incomeAmount.toFixed(2)}`}
+                  {loadingIncome ? "..." : `₹${incomeAmount.toFixed(2)}`}
                 </p>
                 <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
                   <span className="capitalize">{incomeType}</span>

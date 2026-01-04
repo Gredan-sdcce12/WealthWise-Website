@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,17 @@ import { Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const STORAGE_KEY = "ww:last-income";
+
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const sourceOptions = [
+  "Salary",
+  "Freelance",
+  "Bonus",
+  "Rent",
+  "Reimbursement",
+  "Payout",
+  "Other",
+];
 
 export function AddIncomeDialog({
   trigger,
@@ -24,6 +35,9 @@ export function AddIncomeDialog({
   const [formData, setFormData] = useState(() => ({
     amount: "",
     frequency: "monthly",
+    source: "",
+    note: "",
+    receivedDate: todayStr(),
   }));
   const [lastIncome, setLastIncome] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,6 +69,9 @@ export function AddIncomeDialog({
       setLastIncome({
         amount: previousIncome.amount,
         frequency: previousIncome.income_type || previousIncome.frequency || "monthly",
+        source: previousIncome.source || "",
+        note: previousIncome.note || "",
+        receivedDate: previousIncome.received_date || todayStr(),
       });
     }
   }, [previousIncome]);
@@ -70,9 +87,15 @@ export function AddIncomeDialog({
     if (onSubmit) {
       try {
         setIsSubmitting(true);
-        await onSubmit({ amount: amountValue, income_type: formData.frequency });
+        await onSubmit({
+          amount: amountValue,
+          income_type: formData.frequency,
+          source: formData.source || null,
+          note: formData.note || null,
+          received_date: formData.receivedDate || null,
+        });
         setOpen(false);
-        setFormData({ amount: "", frequency: "monthly" });
+        setFormData({ amount: "", frequency: "monthly", source: "", note: "", receivedDate: todayStr() });
       } catch (err) {
         const desc = err?.message || "Unable to save income. Please try again.";
         toast({ title: "Income not saved", description: desc });
@@ -92,7 +115,7 @@ export function AddIncomeDialog({
     }
     onSubmit?.(formData);
     setOpen(false);
-    setFormData({ amount: "", frequency: "monthly" });
+    setFormData({ amount: "", frequency: "monthly", source: "", note: "", receivedDate: todayStr() });
   };
 
   const applyPreviousIncome = async () => {
@@ -112,12 +135,31 @@ export function AddIncomeDialog({
     }
     setFormData({
       ...lastIncome,
+      amount: lastIncome.amount ?? "",
+      frequency: lastIncome.frequency || "monthly",
+      source: lastIncome.source || "",
+      note: lastIncome.note || "",
+      receivedDate: lastIncome.receivedDate || todayStr(),
     });
-    toast({ title: "Loaded previous income", description: `₹${lastIncome.amount} (${lastIncome.frequency})` });
+    toast({
+      title: "Loaded previous income",
+      description: `₹${lastIncome.amount} (${lastIncome.frequency}${lastIncome.source ? ` • ${lastIncome.source}` : ""})`,
+    });
   };
 
   const hasPrevious = Boolean(lastIncome) || Boolean(onUsePrevious);
   const isBusy = loading || isSubmitting;
+
+  const summaryLine = useMemo(() => {
+    if (!formData.amount) return "";
+    const parts = [
+      `₹${formData.amount || 0}`,
+      formData.frequency,
+      formData.source || null,
+      formData.receivedDate ? `on ${formData.receivedDate}` : null,
+    ].filter(Boolean);
+    return parts.join(" • ");
+  }, [formData.amount, formData.frequency, formData.source, formData.receivedDate]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -134,7 +176,9 @@ export function AddIncomeDialog({
               <div>
                 <p className="text-sm font-medium">Use previous income</p>
                 <p className="text-xs text-muted-foreground">
-                  {lastIncome ? `Last: ₹${lastIncome.amount} (${lastIncome.frequency})` : "One-tap fill from your last entry."}
+                  {lastIncome
+                    ? `Last: ₹${lastIncome.amount} (${lastIncome.frequency}${lastIncome?.source ? ` • ${lastIncome.source}` : ""})`
+                    : "One-tap fill from your last entry."}
                 </p>
               </div>
               <Button type="button" size="sm" variant="outline" onClick={applyPreviousIncome} disabled={!hasPrevious || isBusy}>
@@ -157,6 +201,21 @@ export function AddIncomeDialog({
             />
           </div>
           <div className="space-y-2">
+            <Label>Income Source</Label>
+            <Select
+              value={formData.source || ""}
+              onValueChange={(v) => setFormData({ ...formData, source: v })}
+              disabled={isBusy}
+            >
+              <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+              <SelectContent>
+                {sourceOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt.toLowerCase()}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label>Income Frequency</Label>
             <Select value={formData.frequency} onValueChange={(v) => setFormData({ ...formData, frequency: v })} disabled={isBusy}>
               <SelectTrigger><SelectValue placeholder="Select frequency" /></SelectTrigger>
@@ -166,11 +225,34 @@ export function AddIncomeDialog({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Received Date</Label>
+            <Input
+              type="date"
+              value={formData.receivedDate}
+              onChange={(e) => setFormData({ ...formData, receivedDate: e.target.value })}
+              max={todayStr()}
+              disabled={isBusy}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Note (optional)</Label>
+            <Input
+              type="text"
+              value={formData.note}
+              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+              placeholder="E.g., Project Phoenix payout"
+              disabled={isBusy}
+            />
+          </div>
           <div className="flex gap-2 pt-4">
             <Button type="submit" variant="hero" className="flex-1" disabled={isBusy}>
               {isBusy ? "Saving..." : "Add Income"}
             </Button>
           </div>
+          {summaryLine && (
+            <p className="text-xs text-muted-foreground">Will log: {summaryLine}</p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

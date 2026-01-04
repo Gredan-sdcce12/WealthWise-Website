@@ -14,7 +14,32 @@ export function DashboardLayout() {
   const [allowUsePrevious, setAllowUsePrevious] = useState(false);
   const [userId, setUserId] = useState(null);
   const [latestIncome, setLatestIncome] = useState(null);
+  const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
+  const [isLoadingIncomeTotal, setIsLoadingIncomeTotal] = useState(true);
   const [isSavingIncome, setIsSavingIncome] = useState(false);
+
+  const fetchMonthlyIncomeTotal = useCallback(
+    async (uid, month, year) => {
+      if (!uid) return;
+      setIsLoadingIncomeTotal(true);
+      const params = new URLSearchParams();
+      if (month) params.set("month", month);
+      if (year) params.set("year", year);
+      const query = params.toString();
+      const url = `${API_BASE}/income/total/${uid}${query ? `?${query}` : ""}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Income total fetch failed (${res.status})`);
+        const body = await res.json();
+        setMonthlyIncomeTotal(typeof body.total === "number" ? body.total : 0);
+      } catch (err) {
+        toast({ title: "Unable to load income total", description: err?.message || "Please try again." });
+      } finally {
+        setIsLoadingIncomeTotal(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     let active = true;
@@ -37,6 +62,7 @@ export function DashboardLayout() {
           setLatestIncome(body);
         }
         setAllowUsePrevious(hasIncome);
+        await fetchMonthlyIncomeTotal(uid); // Fetch monthly income total
         setShowIncomePrompt(true);
       } catch (err) {
         toast({ title: "Unable to check income", description: err?.message || "Please try again." });
@@ -49,10 +75,10 @@ export function DashboardLayout() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [fetchMonthlyIncomeTotal]); // Added fetchMonthlyIncomeTotal as a dependency
 
   const handleSaveIncome = useCallback(
-    async ({ amount, income_type }) => {
+    async ({ amount, income_type, source, note, received_date }) => {
       if (!userId) throw new Error("User not available");
       try {
         setIsSavingIncome(true);
@@ -63,6 +89,9 @@ export function DashboardLayout() {
             user_id: userId,
             amount,
             income_type,
+            source,
+            note,
+            received_date,
           }),
         });
         if (!res.ok) {
@@ -72,6 +101,7 @@ export function DashboardLayout() {
         const created = await res.json();
         setLatestIncome(created);
         setAllowUsePrevious(true);
+        await fetchMonthlyIncomeTotal(userId, created.month, created.year);
         setShowIncomePrompt(false);
         toast({ title: "Income saved", description: "You're good to go." });
       } catch (err) {
@@ -81,7 +111,7 @@ export function DashboardLayout() {
         setIsSavingIncome(false);
       }
     },
-    [userId]
+    [fetchMonthlyIncomeTotal, userId] // Added fetchMonthlyIncomeTotal as a dependency
   );
 
   const handleCopyPrevious = useCallback(async () => {
@@ -106,7 +136,7 @@ export function DashboardLayout() {
     } finally {
       setIsSavingIncome(false);
     }
-  }, [userId]);
+  }, [fetchMonthlyIncomeTotal, userId]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -128,6 +158,8 @@ export function DashboardLayout() {
               allowUsePrevious,
               handleSaveIncome,
               handleCopyPrevious,
+              monthlyIncomeTotal,
+              isLoadingIncomeTotal,
               isSavingIncome,
             }}
           />
