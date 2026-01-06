@@ -1,3 +1,11 @@
-venv/
+.venv/
 .env
 __pycache__/
+
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
