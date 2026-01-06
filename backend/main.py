@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import get_db_connection
 from income import router as income_router
+from transactions import router as transactions_router
 
 
 app = FastAPI(title="WealthWise Backend")
@@ -20,6 +21,7 @@ app.add_middleware(
 
 # Register routers
 app.include_router(income_router)
+app.include_router(transactions_router)
 
 
 @app.get("/")

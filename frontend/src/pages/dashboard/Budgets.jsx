@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, AlertCircle, Plus, Trash2, Wallet, TrendingDown, PiggyBank } from "lucide-react";
+import { AlertTriangle, AlertCircle, CheckCircle2, Plus, Trash2, Wallet, TrendingDown, PiggyBank, Target } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data: Budget categories
 const CATEGORIES = [
@@ -37,20 +39,39 @@ const INITIAL_BUDGETS = [
   { id: 5, category: "entertainment", type: "Weekly", amount: 1500, spent: 1650 },
 ];
 
+const MONTH_OPTIONS = [
+  "January 2026",
+  "February 2026",
+  "March 2026",
+  "April 2026",
+];
+
 export default function Budgets() {
   // State management
   const [budgets, setBudgets] = useState(INITIAL_BUDGETS);
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0]);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ amount: "", type: "Monthly" });
   const [formData, setFormData] = useState({
     type: "Monthly",
     category: "",
     amount: "",
     otherDescription: "",
   });
+  const { toast } = useToast();
 
   // Calculate totals
   const totalBudget = budgets.reduce((acc, b) => acc + b.amount, 0);
   const totalSpent = budgets.reduce((acc, b) => acc + b.spent, 0);
   const remainingBudget = totalBudget - totalSpent;
+  const overallUsage = totalBudget ? (totalSpent / totalBudget) * 100 : 0;
+
+  const overallStatus = useMemo(() => {
+    if (totalBudget === 0) return { label: "No budgets", color: "bg-gray-200 text-gray-700" };
+    if (overallUsage >= 100) return { label: "Exceeded", color: "bg-red-100 text-red-700" };
+    if (overallUsage >= 80) return { label: "Near limit", color: "bg-amber-100 text-amber-800" };
+    return { label: "On track", color: "bg-emerald-100 text-emerald-800" };
+  }, [overallUsage, totalBudget]);
 
   // Get category label
   const getCategoryLabel = (value) => {
@@ -76,20 +97,19 @@ export default function Budgets() {
     return "bg-red-500";
   };
 
-  // Check if budget has warning (>80%)
-  const hasWarning = (spent, amount) => {
+  // Check status per budget
+  const getStatusForBudget = (spent, amount) => {
     const percentage = getPercentage(spent, amount);
+    if (spent > amount) return { label: "Exceeded", tone: "text-red-700", pill: "bg-red-100 text-red-700" };
+    if (percentage >= 80) return { label: "Near limit", tone: "text-amber-700", pill: "bg-amber-100 text-amber-800" };
+    return { label: "On track", tone: "text-emerald-700", pill: "bg-emerald-100 text-emerald-800" };
+  };
+
+  const budgetsWithWarnings = budgets.filter((b) => {
+    const percentage = getPercentage(b.spent, b.amount);
     return percentage >= 80 && percentage < 100;
-  };
-
-  // Check if budget is exceeded (>100%)
-  const isExceeded = (spent, amount) => {
-    return spent > amount;
-  };
-
-  // Get budgets with warnings
-  const budgetsWithWarnings = budgets.filter((b) => hasWarning(b.spent, b.amount));
-  const budgetsExceeded = budgets.filter((b) => isExceeded(b.spent, b.amount));
+  });
+  const budgetsExceeded = budgets.filter((b) => b.spent > b.amount);
 
   // Handle form input changes
   const handleChange = (field, value) => {
@@ -122,235 +142,203 @@ export default function Budgets() {
 
     setBudgets((prev) => [...prev, newBudget]);
     setFormData({ type: "Monthly", category: "", amount: "", otherDescription: "" });
+
+    toast({ title: "Budget saved", description: `${getCategoryLabel(newBudget.category)} added for ${newBudget.type}.` });
   };
 
   // Handle delete budget
   const handleDelete = (id) => {
     setBudgets((prev) => prev.filter((b) => b.id !== id));
+
+    toast({ title: "Budget removed", description: "The category has been deleted.", variant: "destructive" });
+  };
+
+  const startEditing = (budget) => {
+    setEditingId(budget.id);
+    setEditForm({ amount: budget.amount.toString(), type: budget.type });
+  };
+
+  const handleUpdateBudget = (e, id) => {
+    e.preventDefault();
+    const parsed = parseFloat(editForm.amount);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      toast({ title: "Enter a valid amount", variant: "destructive" });
+      return;
+    }
+
+    setBudgets((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, amount: parsed, type: editForm.type } : b)),
+    );
+    setEditingId(null);
+    toast({ title: "Budget updated", description: "Limits adjusted for this category." });
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Budget Tracking</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your budgets and track spending across categories
-        </p>
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Budget Planner</h1>
+          <p className="text-muted-foreground">Set monthly limits and track your spending</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Label className="text-sm text-muted-foreground">Month</Label>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select month" />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTH_OPTIONS.map((month) => (
+                <SelectItem key={month} value={month}>
+                  {month}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* ====== BUDGET SETUP SECTION ====== */}
-      <Card variant="default" className="shadow-lg">
-        <CardContent className="p-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Create New Budget
-          </h2>
-          <form onSubmit={handleSaveBudget} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              {/* Budget Type */}
-              <div className="space-y-2">
-                <Label htmlFor="type">Budget Type</Label>
-                <Select value={formData.type} onValueChange={(value) => handleChange("type", value)}>
-                  <SelectTrigger className="w-full min-w-[260px] h-11 rounded-lg border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 hover:border-emerald-400 focus:ring-2 focus:ring-emerald-200 text-foreground shadow-[0_6px_18px_-12px_rgba(16,185,129,0.55)]">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white text-gray-900 shadow-xl border border-emerald-100">
-                    <SelectItem value="Weekly" className="text-gray-900 data-[highlighted]:bg-emerald-100 [&_svg]:hidden">
-                      Weekly
-                    </SelectItem>
-                    <SelectItem value="Monthly" className="text-gray-900 data-[highlighted]:bg-emerald-100 [&_svg]:hidden">
-                      Monthly
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Category */}
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={(value) => handleChange("category", value)}>
-                  <SelectTrigger className="w-full min-w-[260px] h-11 rounded-lg border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 hover:border-emerald-400 focus:ring-2 focus:ring-emerald-200 text-foreground shadow-[0_6px_18px_-12px_rgba(16,185,129,0.55)]">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white text-gray-900 shadow-xl border border-emerald-100">
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value} className="flex items-center gap-2 text-gray-900 data-[highlighted]:bg-emerald-100 [&_svg]:hidden">
-                        {cat.icon} {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Budget Amount */}
-              <div className="space-y-2">
-                <Label htmlFor="amount">Budget Amount (₹)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="Enter amount"
-                  value={formData.amount}
-                  onChange={(e) => handleChange("amount", e.target.value)}
-                />
-              </div>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card variant="elevated">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Total Budget</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3 pb-6">
+            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Wallet className="w-6 h-6 text-blue-600" />
             </div>
+            <div>
+              <p className="text-2xl font-bold">₹{totalBudget.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Based on all active categories</p>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Others Category Description - Only shown when Others is selected */}
-            {formData.category === "others" && (
-              <div className="space-y-2">
-                <Label htmlFor="otherDescription">Describe Others Category</Label>
-                <Input
-                  id="otherDescription"
-                  type="text"
-                  placeholder="E.g., Pet care, Gifts, Hobbies, etc."
-                  value={formData.otherDescription}
-                  onChange={(e) => handleChange("otherDescription", e.target.value)}
-                />
+        <Card variant="elevated">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Spent So Far</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3 pb-6">
+            <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+              <TrendingDown className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-red-600">₹{totalSpent.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">From logged transactions</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="elevated">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Remaining</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-3 pb-6">
+            <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <PiggyBank className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <p className={`text-2xl font-bold ${remainingBudget >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                ₹{remainingBudget.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground">Updated in real time</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card variant="elevated">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Budget Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 pb-6">
+            <div className="flex items-center gap-2">
+              <Badge className={overallStatus.color}>{overallStatus.label}</Badge>
+              <span className="text-sm text-muted-foreground">{overallUsage.toFixed(1)}% used</span>
+            </div>
+            <Progress value={Math.min(overallUsage, 120)} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              Status is driven by budget vs. expenses for {selectedMonth}.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {(budgetsWithWarnings.length > 0 || budgetsExceeded.length > 0) && (
+        <Card variant="outline" className="border-dashed">
+          <CardContent className="p-4 space-y-2">
+            {budgetsExceeded.length > 0 && (
+              <div className="flex items-start gap-3 text-red-700">
+                <AlertTriangle className="w-5 h-5 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Budget exceeded</p>
+                  <p className="text-sm">
+                    {budgetsExceeded.length} {budgetsExceeded.length === 1 ? "category" : "categories"} crossed the limit. Tighten spending or raise the limit.
+                  </p>
+                </div>
               </div>
             )}
-
-            <Button type="submit" className="w-full md:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Save Budget
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* ====== ALERTS & WARNINGS ====== */}
-      {(budgetsWithWarnings.length > 0 || budgetsExceeded.length > 0) && (
-        <div className="space-y-3">
-          {budgetsExceeded.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
-              <div>
-                <p className="font-semibold text-red-800">Budget Exceeded!</p>
-                <p className="text-sm text-red-700">
-                  {budgetsExceeded.length} {budgetsExceeded.length === 1 ? "budget has" : "budgets have"} exceeded their limits.
-                </p>
+            {budgetsWithWarnings.length > 0 && (
+              <div className="flex items-start gap-3 text-amber-700">
+                <AlertCircle className="w-5 h-5 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Approaching limit</p>
+                  <p className="text-sm">
+                    {budgetsWithWarnings.length} {budgetsWithWarnings.length === 1 ? "category" : "categories"} are above 80% usage.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-
-          {budgetsWithWarnings.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-              <div>
-                <p className="font-semibold text-yellow-800">Budget Warning</p>
-                <p className="text-sm text-yellow-700">
-                  {budgetsWithWarnings.length} {budgetsWithWarnings.length === 1 ? "budget is" : "budgets are"} over 80% used.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      {/* ====== BUDGET OVERVIEW CARDS ====== */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Total Budget */}
+      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card variant="elevated">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-blue-600" />
-              </div>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Budget</p>
-                <p className="text-2xl font-bold">₹{totalBudget.toLocaleString()}</p>
+                <CardTitle>Category-wise Budgets</CardTitle>
+                <CardDescription>Live progress with under/near/exceeded signals</CardDescription>
               </div>
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                <Target className="w-4 h-4" /> {budgets.length} categories
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {budgets.length === 0 && (
+              <p className="text-center text-muted-foreground py-10">No budgets yet. Create one to get started.</p>
+            )}
 
-        {/* Total Spent */}
-        <Card variant="elevated">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
-                <TrendingDown className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Amount Spent</p>
-                <p className="text-2xl font-bold text-red-600">₹{totalSpent.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {budgets.map((budget) => {
+              const percentage = getPercentage(budget.spent, budget.amount);
+              const remaining = budget.amount - budget.spent;
+              const status = getStatusForBudget(budget.spent, budget.amount);
 
-        {/* Remaining Budget */}
-        <Card variant="elevated">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <PiggyBank className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Remaining Budget</p>
-                <p className={`text-2xl font-bold ${remainingBudget >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                  ₹{remainingBudget.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ====== BUDGET USAGE VISUALIZATION ====== */}
-      <Card variant="elevated">
-        <CardContent className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Overall Budget Usage</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                ₹{totalSpent.toLocaleString()} / ₹{totalBudget.toLocaleString()}
-              </span>
-              <span className="font-semibold">
-                {((totalSpent / totalBudget) * 100).toFixed(1)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${getProgressColor((totalSpent / totalBudget) * 100)}`}
-                style={{ width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%` }}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ====== CATEGORY-WISE BUDGET LIST ====== */}
-      <Card variant="elevated">
-        <CardContent className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Category-wise Budgets</h2>
-          {budgets.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No budgets created yet. Create your first budget above!
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {budgets.map((budget) => {
-                const percentage = getPercentage(budget.spent, budget.amount);
-                const remaining = budget.amount - budget.spent;
-                const exceeded = isExceeded(budget.spent, budget.amount);
-
-                return (
-                  <div key={budget.id} className="border rounded-lg p-4 space-y-3 hover:bg-muted/30 transition-colors">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{getCategoryIcon(budget.category)}</span>
-                        <div>
-                          <h3 className="font-semibold">
-                            {getCategoryLabel(budget.category)}
-                            {budget.category === "others" && budget.otherDescription && (
-                              <span className="text-sm font-normal text-muted-foreground ml-2">({budget.otherDescription})</span>
-                            )}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">{budget.type} Budget</p>
-                        </div>
+              return (
+                <div key={budget.id} className="rounded-xl border px-4 py-3 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.35)] bg-white/70">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{getCategoryIcon(budget.category)}</span>
+                      <div>
+                        <p className="font-semibold">
+                          {getCategoryLabel(budget.category)}
+                          {budget.category === "others" && budget.otherDescription && (
+                            <span className="text-sm font-normal text-muted-foreground ml-2">({budget.otherDescription})</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{budget.type} budget</p>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={status.pill}>{status.label}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => startEditing(budget)}
+                        className="hover:bg-primary/10"
+                      >
+                        Edit
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -360,47 +348,177 @@ export default function Budgets() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
+                  </div>
 
-                    {/* Amounts */}
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Budget</p>
-                        <p className="font-semibold">₹{budget.amount.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Spent</p>
-                        <p className="font-semibold text-red-600">₹{budget.spent.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Remaining</p>
-                        <p className={`font-semibold ${exceeded ? "text-red-600" : "text-emerald-600"}`}>
-                          {exceeded ? "-" : ""}₹{Math.abs(remaining).toLocaleString()}
-                        </p>
-                      </div>
+                  <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Budget</p>
+                      <p className="font-semibold">₹{budget.amount.toLocaleString()}</p>
                     </div>
-
-                    {/* Progress Bar */}
-                    <div className="space-y-1">
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-300 ${getProgressColor(percentage)}`}
-                          style={{ width: `${Math.min(percentage, 100)}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className={percentage >= 80 ? "text-red-600 font-semibold" : "text-muted-foreground"}>
-                          {percentage.toFixed(1)}% used
-                        </span>
-                        {exceeded && <span className="text-red-600 font-semibold">Budget Exceeded!</span>}
-                      </div>
+                    <div>
+                      <p className="text-muted-foreground">Spent</p>
+                      <p className="font-semibold text-red-600">₹{budget.spent.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Remaining</p>
+                      <p className={`font-semibold ${remaining >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {remaining >= 0 ? "₹" : "-₹"}{Math.abs(remaining).toLocaleString()}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                  {editingId === budget.id && (
+                    <form className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_auto] items-end" onSubmit={(e) => handleUpdateBudget(e, budget.id)}>
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit-amount-${budget.id}`}>New amount (₹)</Label>
+                        <Input
+                          id={`edit-amount-${budget.id}`}
+                          type="number"
+                          value={editForm.amount}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, amount: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit-type-${budget.id}`}>Period</Label>
+                        <Select
+                          value={editForm.type}
+                          onValueChange={(value) => setEditForm((prev) => ({ ...prev, type: value }))}
+                        >
+                          <SelectTrigger id={`edit-type-${budget.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Monthly">Monthly</SelectItem>
+                            <SelectItem value="Weekly">Weekly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="submit" size="sm">Save</Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div className="mt-3 space-y-1">
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${getProgressColor(percentage)}`}
+                        style={{ width: `${Math.min(percentage, 110)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{percentage.toFixed(1)}% used</span>
+                      {percentage >= 100 ? <span className="text-red-600 font-semibold">Exceeded</span> : null}
+                    </div>
+                    {percentage >= 80 && (
+                      <div className="flex items-center gap-2 text-xs">
+                        {percentage >= 100 ? (
+                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-500" />
+                        )}
+                        <span className={percentage >= 100 ? "text-red-700" : "text-amber-700"}>
+                          {percentage >= 100
+                            ? `Exceeded by ₹${Math.abs(remaining).toLocaleString()}`
+                            : `Almost at limit: ${percentage.toFixed(0)}%`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          <Card variant="elevated">
+            <CardHeader>
+              <CardTitle>Add Budget</CardTitle>
+              <CardDescription>Plan limits by category and period. No receipts or payment details here.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveBudget} className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Time period</Label>
+                    <Select value={formData.type} onValueChange={(value) => handleChange("type", value)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                        <SelectItem value="Weekly">Weekly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select value={formData.category} onValueChange={(value) => handleChange("category", value)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.icon} {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.category === "others" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="otherDescription">Describe this category</Label>
+                      <Input
+                        id="otherDescription"
+                        type="text"
+                        placeholder="E.g., Pet care, gifts, hobbies"
+                        value={formData.otherDescription}
+                        onChange={(e) => handleChange("otherDescription", e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Budget amount (₹)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      placeholder="Enter amount"
+                      value={formData.amount}
+                      onChange={(e) => handleChange("amount", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full">
+                  <Plus className="w-4 h-4" /> Save budget
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card variant="flat" className="border border-dashed border-emerald-100">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Budget tips
+              </CardTitle>
+              <CardDescription>Small nudges to keep you on track</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>• Keep essentials (rent, bills, groceries) at the top of your list.</p>
+              <p>• Use weekly budgets for fast-moving spends like food or transport.</p>
+              <p>• Revisit categories when alerts start firing; adjust limits, not just spending.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

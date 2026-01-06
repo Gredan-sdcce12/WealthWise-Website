@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { Trash2, TrendingUp, TrendingDown, Plus, Edit2, Calendar, Upload, FileText, Loader2, Filter } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api";
 
 const categories = [
   { value: "food", label: "Food & Dining", icon: "🍽️" },
@@ -38,58 +40,14 @@ const paymentModes = [
 const monthlyBudget = 25000;
 
 export default function Transactions() {
-  const [transactions, setTransactions] = useState([
-    {
-      id: 1,
-      amount: 450,
-      type: "expense",
-      category: "food",
-      date: "2026-01-05",
-      description: "Zomato dinner",
-      paymentMode: "upi",
-      billImage: null,
-    },
-    {
-      id: 2,
-      amount: 2500,
-      type: "expense",
-      category: "shopping",
-      date: "2026-01-04",
-      description: "Clothes shopping",
-      paymentMode: "card",
-      billImage: null,
-    },
-    {
-      id: 3,
-      amount: 150,
-      type: "expense",
-      category: "transport",
-      date: "2026-01-03",
-      description: "Auto rickshaw",
-      paymentMode: "cash",
-      billImage: null,
-    },
-    {
-      id: 4,
-      amount: 800,
-      type: "expense",
-      category: "entertainment",
-      date: "2026-01-02",
-      description: "Movie tickets",
-      paymentMode: "card",
-      billImage: null,
-    },
-    {
-      id: 5,
-      amount: 3500,
-      type: "expense",
-      category: "bills",
-      date: "2026-01-01",
-      description: "Electricity bill",
-      paymentMode: "bank_transfer",
-      billImage: null,
-    },
-  ]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
+  const [summary, setSummary] = useState({
+    total_expense: 0,
+    total_income: 0,
+    expenses_by_category: {},
+  });
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -115,30 +73,85 @@ export default function Transactions() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
 
-  // Calculate summary
-  const currentMonthExpenses = transactions.filter(
-    (t) => t.type === "expense" && t.date.startsWith(selectedMonth)
-  );
+  // Get current user and load transactions
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    loadUser();
+  }, []);
 
-  const totalExpenses = currentMonthExpenses.reduce((sum, t) => sum + t.amount, 0);
+  useEffect(() => {
+    if (userId) {
+      fetchTransactions();
+      fetchSummary();
+    }
+  }, [userId, selectedMonth, filterCategory, filterPaymentMode, searchQuery]);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const [year, month] = selectedMonth.split('-');
+      const startDate = `${year}-${month}-01`;
+      const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+
+      const filters = {
+        start_date: startDate,
+        end_date: endDate,
+      };
+
+      if (filterCategory !== 'all') filters.category = filterCategory;
+      if (filterPaymentMode !== 'all') filters.payment_mode = filterPaymentMode;
+      if (searchQuery) filters.search = searchQuery;
+
+      const data = await api.getTransactions(userId, filters);
+      
+      // Transform API response to match component format
+      const formatted = data.map(t => ({
+        id: t.id,
+        amount: t.amount,
+        type: t.txn_type,
+        category: t.category,
+        date: t.txn_date,
+        description: t.description || 'No description',
+        paymentMode: t.payment_mode,
+      }));
+      
+      setTransactions(formatted);
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+      toast({ title: "Error", description: "Failed to load transactions", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSummary = async () => {
+    try {
+      const [year, month] = selectedMonth.split('-');
+      const data = await api.getTransactionSummary(userId, parseInt(month), parseInt(year));
+      setSummary(data);
+    } catch (error) {
+      console.error('Failed to fetch summary:', error);
+    }
+  };
+
+  // Calculate summary from fetched data
+  const currentMonthExpenses = transactions.filter((t) => t.type === "expense");
+  const totalExpenses = summary.total_expense;
   const budgetLeft = monthlyBudget - totalExpenses;
 
-  const expensesByCategory = {};
-  currentMonthExpenses.forEach((t) => {
-    expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
-  });
+  const expensesByCategory = summary.expenses_by_category || {};
 
   const overspentCategories = Object.values(expensesByCategory).filter(
     (amount) => amount > 5000
   ).length;
 
-  // Filter transactions
-  const filteredTransactions = currentMonthExpenses.filter((t) => {
-    const matchCategory = filterCategory === "all" || t.category === filterCategory;
-    const matchPayment = filterPaymentMode === "all" || t.paymentMode === filterPaymentMode;
-    const matchSearch = t.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCategory && matchPayment && matchSearch;
-  });
+  // Filter transactions (client-side for already fetched data)
+  const filteredTransactions = currentMonthExpenses;
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -178,51 +191,95 @@ export default function Transactions() {
     }
 
     if (editingId) {
-      setTransactions((prev) =>
-        prev.map((t) =>
-          t.id === editingId
-            ? {
-                ...t,
-                amount: parseFloat(formData.amount),
-                type: formData.type,
-                category: formData.category,
-                date: formData.date,
-                description: formData.description || "No description",
-                paymentMode: formData.paymentMode,
-              }
-            : t
-        )
-      );
-      setEditingId(null);
+      updateTransaction();
     } else {
-      const newTransaction = {
-        id: Date.now(),
-        amount: parseFloat(formData.amount),
-        type: formData.type,
-        category: formData.category,
-        date: formData.date,
-        description: formData.description || "No description",
-        paymentMode: formData.paymentMode,
-        billImage: null,
-      };
-      setTransactions((prev) => [newTransaction, ...prev]);
+      createTransaction();
     }
+  };
 
-    setFormData({
-      amount: "",
-      type: "expense",
-      category: "",
-      date: new Date().toISOString().split('T')[0],
-      description: "",
-      paymentMode: "",
-    });
-    setShowAddDialog(false);
-    toast({ title: "Success", description: "Transaction saved successfully" });
+  const createTransaction = async () => {
+    try {
+      const payload = {
+        user_id: userId,
+        amount: parseFloat(formData.amount),
+        txn_type: formData.type,
+        category: formData.category,
+        description: formData.description || "No description",
+        payment_mode: formData.paymentMode,
+        txn_date: formData.date,
+      };
+
+      await api.createTransaction(payload);
+      
+      setFormData({
+        amount: "",
+        type: "expense",
+        category: "",
+        date: new Date().toISOString().split('T')[0],
+        description: "",
+        paymentMode: "",
+      });
+      setShowAddDialog(false);
+      toast({ title: "Success", description: "Transaction created successfully" });
+      
+      // Refresh data
+      fetchTransactions();
+      fetchSummary();
+    } catch (error) {
+      console.error('Failed to create transaction:', error);
+      toast({ title: "Error", description: error.message || "Failed to create transaction", variant: "destructive" });
+    }
+  };
+
+  const updateTransaction = async () => {
+    try {
+      const payload = {
+        amount: parseFloat(formData.amount),
+        category: formData.category,
+        description: formData.description || "No description",
+        payment_mode: formData.paymentMode,
+        txn_date: formData.date,
+      };
+
+      await api.updateTransaction(editingId, userId, payload);
+      
+      setEditingId(null);
+      setFormData({
+        amount: "",
+        type: "expense",
+        category: "",
+        date: new Date().toISOString().split('T')[0],
+        description: "",
+        paymentMode: "",
+      });
+      setShowAddDialog(false);
+      toast({ title: "Success", description: "Transaction updated successfully" });
+      
+      // Refresh data
+      fetchTransactions();
+      fetchSummary();
+    } catch (error) {
+      console.error('Failed to update transaction:', error);
+      toast({ title: "Error", description: error.message || "Failed to update transaction", variant: "destructive" });
+    }
   };
 
   const handleDelete = (id) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
-    toast({ title: "Deleted", description: "Transaction removed" });
+    deleteTransaction(id);
+  };
+
+  const deleteTransaction = async (id) => {
+    try {
+      await api.deleteTransaction(id, userId);
+      toast({ title: "Deleted", description: "Transaction removed" });
+      
+      // Refresh data
+      fetchTransactions();
+      fetchSummary();
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
+      toast({ title: "Error", description: error.message || "Failed to delete transaction", variant: "destructive" });
+    }
   };
 
   const handleEdit = (transaction) => {
@@ -423,7 +480,12 @@ export default function Transactions() {
       <Card variant="elevated">
         <CardContent className="p-6">
           <h3 className="text-xl font-semibold mb-4">Recent Expenses</h3>
-          {filteredTransactions.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-8 h-8 mx-auto animate-spin text-muted-foreground" />
+              <p className="text-muted-foreground mt-2">Loading transactions...</p>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No expenses found</p>
           ) : (
             <div className="overflow-x-auto">
