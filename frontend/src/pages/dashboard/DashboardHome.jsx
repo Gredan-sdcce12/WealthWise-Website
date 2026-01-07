@@ -29,7 +29,7 @@ import {
 import { ScanReceiptDialog } from "@/components/dialogs/ScanReceiptDialog";
 import { AddExpenseDialog } from "@/components/dialogs/AddExpenseDialog";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
-// import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
+import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
 import { AddIncomeDialog } from "@/components/dialogs/AddIncomeDialog";
 import { supabase } from "@/lib/supabase";
 
@@ -83,41 +83,39 @@ export default function DashboardHome() {
   const [latestIncome, setLatestIncome] = useState(null);
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
   const [isLoadingMonthlyTotal, setIsLoadingMonthlyTotal] = useState(true);
-  const [showIncomePrompt, setShowIncomePrompt] = useState(false);
-  const [allowUsePrevious, setAllowUsePrevious] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
     if (sharedIncome) {
       setLatestIncome(sharedIncome);
-      setAllowUsePrevious(true);
       return;
     }
 
     const fetchLatestIncome = async () => {
       try {
         const { data } = await supabase.auth.getSession();
+        if (!active) return;
         const uid = data?.session?.user?.id;
         if (!uid) {
-          setShowIncomePrompt(true);
           return;
         }
 
         const res = await fetch(`${API_BASE}/income/latest/${uid}`);
         if (!res.ok) throw new Error(`Income fetch failed (${res.status})`);
         const body = await res.json();
-        const hasIncome = body?.amount !== null && body?.amount !== undefined;
-        if (hasIncome) {
+        if (body?.amount !== null && body?.amount !== undefined) {
           setLatestIncome(body);
-          setAllowUsePrevious(true);
         }
-        setShowIncomePrompt(true);
       } catch (err) {
         console.warn("Unable to load income", err);
-        setShowIncomePrompt(true);
       }
     };
 
     fetchLatestIncome();
+    return () => {
+      active = false;
+    };
   }, [sharedIncome]);
 
   useEffect(() => {
@@ -170,24 +168,18 @@ export default function DashboardHome() {
           <h1 className="text-3xl font-bold">Good morning, John! 👋</h1>
           <p className="text-muted-foreground">Here's your financial overview for today.</p>
         </div>
-        <Button 
-          variant="hero" 
-          size="sm" 
-          className="flex items-center gap-2"
-          onClick={() => setShowIncomePrompt(true)}
-        >
-          <ArrowUpRight className="w-4 h-4" />
-          Add income
-        </Button>
-        
         <AddIncomeDialog
-          open={showIncomePrompt}
-          onOpenChange={setShowIncomePrompt}
-          allowUsePrevious={allowUsePrevious || Boolean(sharedAllowUsePrevious)}
+          allowUsePrevious={Boolean(sharedAllowUsePrevious)}
           onSubmit={sharedSaveIncome}
-          onUsePrevious={allowUsePrevious || sharedAllowUsePrevious ? sharedCopyIncome : undefined}
+          onUsePrevious={sharedAllowUsePrevious ? sharedCopyIncome : undefined}
           previousIncome={sharedIncome || latestIncome}
           loading={Boolean(sharedSaving)}
+          trigger={(
+            <Button variant="hero" size="sm" className="flex items-center gap-2">
+              <ArrowUpRight className="w-4 h-4" />
+              Add income
+            </Button>
+          )}
         />
       </div>
 
