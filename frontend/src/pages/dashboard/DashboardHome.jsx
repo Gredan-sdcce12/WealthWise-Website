@@ -29,7 +29,7 @@ import {
 import { ScanReceiptDialog } from "@/components/dialogs/ScanReceiptDialog";
 import { AddExpenseDialog } from "@/components/dialogs/AddExpenseDialog";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
-import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
+// import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
 import { AddIncomeDialog } from "@/components/dialogs/AddIncomeDialog";
 import { supabase } from "@/lib/supabase";
 

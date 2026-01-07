@@ -32,11 +32,11 @@ const CATEGORIES = [
 
 // Mock data: Initial budgets
 const INITIAL_BUDGETS = [
-  { id: 1, category: "food", type: "Monthly", amount: 8000, spent: 5600 },
-  { id: 2, category: "transport", type: "Monthly", amount: 3000, spent: 2700 },
-  { id: 3, category: "shopping", type: "Weekly", amount: 2000, spent: 1200 },
-  { id: 4, category: "bills", type: "Monthly", amount: 5000, spent: 4800 },
-  { id: 5, category: "entertainment", type: "Weekly", amount: 1500, spent: 1650 },
+  { id: 1, category: "food", type: "Monthly", amount: 8000, spent: 5600, startDate: "2026-01", alertThreshold: 80 },
+  { id: 2, category: "transport", type: "Monthly", amount: 3000, spent: 2700, startDate: "2026-01", alertThreshold: 80 },
+  { id: 3, category: "shopping", type: "Weekly", amount: 2000, spent: 1200, startDate: "2026-01-01", alertThreshold: 80 },
+  { id: 4, category: "bills", type: "Monthly", amount: 5000, spent: 4800, startDate: "2026-01", alertThreshold: 80 },
+  { id: 5, category: "entertainment", type: "Weekly", amount: 1500, spent: 1650, startDate: "2026-01-01", alertThreshold: 80 },
 ];
 
 const MONTH_OPTIONS = [
@@ -51,14 +51,62 @@ export default function Budgets() {
   const [budgets, setBudgets] = useState(INITIAL_BUDGETS);
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0]);
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ amount: "", type: "Monthly" });
+  const [editForm, setEditForm] = useState({ amount: "", type: "Monthly", alertThreshold: "80" });
   const [formData, setFormData] = useState({
     type: "Monthly",
     category: "",
     amount: "",
     otherDescription: "",
+    startDate: new Date().toISOString().slice(0, 7), // YYYY-MM format
+    alertThreshold: "80",
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const { toast } = useToast();
+
+  // TODO: API Integration
+  // useEffect(() => {
+  //   const fetchBudgets = async () => {
+  //     setIsLoading(true);
+  //     try {
+  //       const data = await api.getBudgets(userId, { month: selectedMonth });
+  //       setBudgets(data);
+  //     } catch (err) {
+  //       setError(err.message);
+  //       toast({ title: "Failed to load budgets", description: err.message, variant: "destructive" });
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+  //   fetchBudgets();
+  // }, [selectedMonth]);
+
+  // TODO: Calculate spent from transactions when backend is ready
+  // const calculateSpent = (budget, transactions) => {
+  //   return transactions
+  //     .filter(txn => {
+  //       const txnDate = new Date(txn.date);
+  //       const budgetStart = new Date(budget.startDate);
+  //       
+  //       // For monthly budgets, check if transaction is in same month/year
+  //       if (budget.type === "Monthly") {
+  //         return txnDate.getMonth() === budgetStart.getMonth() &&
+  //                txnDate.getFullYear() === budgetStart.getFullYear() &&
+  //                txn.category === budget.category;
+  //       }
+  //       
+  //       // For weekly budgets, check if transaction is in same week
+  //       if (budget.type === "Weekly") {
+  //         const weekStart = new Date(budgetStart);
+  //         const weekEnd = new Date(budgetStart);
+  //         weekEnd.setDate(weekEnd.getDate() + 7);
+  //         return txnDate >= weekStart && txnDate < weekEnd &&
+  //                txn.category === budget.category;
+  //       }
+  //       return false;
+  //     })
+  //     .reduce((sum, txn) => sum + Math.abs(txn.amount), 0);
+  // };
 
   // Calculate totals
   const totalBudget = budgets.reduce((acc, b) => acc + b.amount, 0);
@@ -87,6 +135,7 @@ export default function Budgets() {
 
   // Calculate percentage used
   const getPercentage = (spent, amount) => {
+    if (!amount || amount === 0) return 0;
     return (spent / amount) * 100;
   };
 
@@ -98,16 +147,17 @@ export default function Budgets() {
   };
 
   // Check status per budget
-  const getStatusForBudget = (spent, amount) => {
+  const getStatusForBudget = (spent, amount, alertThreshold = 80) => {
     const percentage = getPercentage(spent, amount);
     if (spent > amount) return { label: "Exceeded", tone: "text-red-700", pill: "bg-red-100 text-red-700" };
-    if (percentage >= 80) return { label: "Near limit", tone: "text-amber-700", pill: "bg-amber-100 text-amber-800" };
+    if (percentage >= alertThreshold) return { label: "Near limit", tone: "text-amber-700", pill: "bg-amber-100 text-amber-800" };
     return { label: "On track", tone: "text-emerald-700", pill: "bg-emerald-100 text-emerald-800" };
   };
 
   const budgetsWithWarnings = budgets.filter((b) => {
     const percentage = getPercentage(b.spent, b.amount);
-    return percentage >= 80 && percentage < 100;
+    const threshold = b.alertThreshold || 80;
+    return percentage >= threshold && percentage < 100;
   });
   const budgetsExceeded = budgets.filter((b) => b.spent > b.amount);
 
@@ -121,13 +171,41 @@ export default function Budgets() {
     e.preventDefault();
 
     if (!formData.category || !formData.amount) {
-      alert("Please fill all fields");
+      toast({ 
+        title: "Missing fields", 
+        description: "Please fill all required fields",
+        variant: "destructive" 
+      });
       return;
     }
 
     // Validate Others category description
     if (formData.category === "others" && !formData.otherDescription.trim()) {
-      alert("Please provide a description for Others category");
+      toast({ 
+        title: "Description required", 
+        description: "Please provide a description for Others category",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const parsedAmount = parseFloat(formData.amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({ 
+        title: "Invalid amount", 
+        description: "Budget amount must be a positive number",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const parsedThreshold = parseInt(formData.alertThreshold);
+    if (isNaN(parsedThreshold) || parsedThreshold < 1 || parsedThreshold > 100) {
+      toast({ 
+        title: "Invalid threshold", 
+        description: "Alert threshold must be between 1 and 100",
+        variant: "destructive" 
+      });
       return;
     }
 
@@ -135,13 +213,22 @@ export default function Budgets() {
       id: Date.now(),
       category: formData.category,
       type: formData.type,
-      amount: parseFloat(formData.amount),
+      amount: parsedAmount,
       spent: 0, // Initial spent is 0
+      startDate: formData.startDate,
+      alertThreshold: parsedThreshold,
       otherDescription: formData.category === "others" ? formData.otherDescription : undefined,
     };
 
     setBudgets((prev) => [...prev, newBudget]);
-    setFormData({ type: "Monthly", category: "", amount: "", otherDescription: "" });
+    setFormData({ 
+      type: "Monthly", 
+      category: "", 
+      amount: "", 
+      otherDescription: "",
+      startDate: new Date().toISOString().slice(0, 7),
+      alertThreshold: "80"
+    });
 
     toast({ title: "Budget saved", description: `${getCategoryLabel(newBudget.category)} added for ${newBudget.type}.` });
   };
@@ -155,19 +242,37 @@ export default function Budgets() {
 
   const startEditing = (budget) => {
     setEditingId(budget.id);
-    setEditForm({ amount: budget.amount.toString(), type: budget.type });
+    setEditForm({ 
+      amount: budget.amount.toString(), 
+      type: budget.type,
+      alertThreshold: (budget.alertThreshold || 80).toString()
+    });
   };
 
   const handleUpdateBudget = (e, id) => {
     e.preventDefault();
     const parsed = parseFloat(editForm.amount);
     if (Number.isNaN(parsed) || parsed <= 0) {
-      toast({ title: "Enter a valid amount", variant: "destructive" });
+      toast({ 
+        title: "Invalid amount", 
+        description: "Budget amount must be a positive number",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const parsedThreshold = parseInt(editForm.alertThreshold);
+    if (isNaN(parsedThreshold) || parsedThreshold < 1 || parsedThreshold > 100) {
+      toast({ 
+        title: "Invalid threshold", 
+        description: "Alert threshold must be between 1 and 100",
+        variant: "destructive" 
+      });
       return;
     }
 
     setBudgets((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, amount: parsed, type: editForm.type } : b)),
+      prev.map((b) => (b.id === id ? { ...b, amount: parsed, type: editForm.type, alertThreshold: parsedThreshold } : b)),
     );
     setEditingId(null);
     toast({ title: "Budget updated", description: "Limits adjusted for this category." });
@@ -262,6 +367,20 @@ export default function Budgets() {
         </Card>
       </div>
 
+      {error && (
+        <Card variant="outline" className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3 text-red-700">
+              <AlertTriangle className="w-5 h-5 mt-0.5" />
+              <div>
+                <p className="font-semibold">Error loading budgets</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {(budgetsWithWarnings.length > 0 || budgetsExceeded.length > 0) && (
         <Card variant="outline" className="border-dashed">
           <CardContent className="p-4 space-y-2">
@@ -305,14 +424,26 @@ export default function Budgets() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {budgets.length === 0 && (
+            {isLoading && (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="rounded-xl border p-4 animate-pulse">
+                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {!isLoading && budgets.length === 0 && (
               <p className="text-center text-muted-foreground py-10">No budgets yet. Create one to get started.</p>
             )}
 
-            {budgets.map((budget) => {
+            {!isLoading && budgets.map((budget) => {
               const percentage = getPercentage(budget.spent, budget.amount);
               const remaining = budget.amount - budget.spent;
-              const status = getStatusForBudget(budget.spent, budget.amount);
+              const status = getStatusForBudget(budget.spent, budget.amount, budget.alertThreshold || 80);
 
               return (
                 <div key={budget.id} className="rounded-xl border px-4 py-3 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.35)] bg-white/70">
@@ -368,7 +499,7 @@ export default function Budgets() {
                   </div>
 
                   {editingId === budget.id && (
-                    <form className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_auto] items-end" onSubmit={(e) => handleUpdateBudget(e, budget.id)}>
+                    <form className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_auto_auto] items-end" onSubmit={(e) => handleUpdateBudget(e, budget.id)}>
                       <div className="space-y-1">
                         <Label htmlFor={`edit-amount-${budget.id}`}>New amount (₹)</Label>
                         <Input
@@ -393,6 +524,18 @@ export default function Budgets() {
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit-threshold-${budget.id}`}>Alert %</Label>
+                        <Input
+                          id={`edit-threshold-${budget.id}`}
+                          type="number"
+                          min="1"
+                          max="100"
+                          className="w-20"
+                          value={editForm.alertThreshold}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, alertThreshold: e.target.value }))}
+                        />
+                      </div>
                       <div className="flex gap-2">
                         <Button type="submit" size="sm">Save</Button>
                         <Button type="button" variant="ghost" size="sm" onClick={() => setEditingId(null)}>
@@ -413,7 +556,7 @@ export default function Budgets() {
                       <span>{percentage.toFixed(1)}% used</span>
                       {percentage >= 100 ? <span className="text-red-600 font-semibold">Exceeded</span> : null}
                     </div>
-                    {percentage >= 80 && (
+                    {percentage >= (budget.alertThreshold || 80) && (
                       <div className="flex items-center gap-2 text-xs">
                         {percentage >= 100 ? (
                           <AlertTriangle className="w-4 h-4 text-red-600" />
@@ -494,6 +637,32 @@ export default function Budgets() {
                       value={formData.amount}
                       onChange={(e) => handleChange("amount", e.target.value)}
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="month"
+                      value={formData.startDate}
+                      onChange={(e) => handleChange("startDate", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="alertThreshold">Alert Threshold (%)</Label>
+                    <Select value={formData.alertThreshold} onValueChange={(value) => handleChange("alertThreshold", value)}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select threshold" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="50">50% - Early Warning</SelectItem>
+                        <SelectItem value="75">75% - Moderate</SelectItem>
+                        <SelectItem value="80">80% - Standard</SelectItem>
+                        <SelectItem value="90">90% - Late Warning</SelectItem>
+                        <SelectItem value="95">95% - Critical Only</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
