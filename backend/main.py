@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import get_db_connection
 from income import router as income_router
 from transactions import router as transactions_router
+from budgets import router as budgets_router
 
 
 app = FastAPI(title="WealthWise Backend")
@@ -13,7 +14,14 @@ app = FastAPI(title="WealthWise Backend")
 # CORS for frontend apps
 app.add_middleware(
 	CORSMiddleware,
-	allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
+	allow_origins=[
+		"http://localhost:5173",  # Vite default
+		"http://127.0.0.1:5173",  # Vite default
+		"http://localhost:3000",  # React/Next.js
+		"http://127.0.0.1:3000",
+		"http://localhost:8080",  # Other frameworks
+		"http://127.0.0.1:8080",
+	],
 	allow_credentials=True,
 	allow_methods=["*"],
 	allow_headers=["*"],
@@ -22,6 +30,7 @@ app.add_middleware(
 # Register routers
 app.include_router(income_router)
 app.include_router(transactions_router)
+app.include_router(budgets_router)
 
 
 @app.get("/")
