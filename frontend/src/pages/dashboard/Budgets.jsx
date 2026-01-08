@@ -1,5 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +50,8 @@ const MONTH_OPTIONS = [
 
 export default function Budgets() {
   // State management
-  const [budgets, setBudgets] = useState(INITIAL_BUDGETS);
+  const [budgets, setBudgets] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0]);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ amount: "", type: "Monthly", alertThreshold: "80" });
@@ -62,24 +65,53 @@ export default function Budgets() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
   const { toast } = useToast();
 
-  // TODO: API Integration
-  // useEffect(() => {
-  //   const fetchBudgets = async () => {
-  //     setIsLoading(true);
-  //     try {
-  //       const data = await api.getBudgets(userId, { month: selectedMonth });
-  //       setBudgets(data);
-  //     } catch (err) {
-  //       setError(err.message);
-  //       toast({ title: "Failed to load budgets", description: err.message, variant: "destructive" });
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-  //   fetchBudgets();
-  // }, [selectedMonth]);
+  // Get user ID from Supabase auth
+  useEffect(() => {
+    const getUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getUserId();
+  }, []);
+
+  // Fetch budgets and categories on mount and when month changes
+  useEffect(() => {
+    if (!userId) return; // Wait for userId to be loaded
+    
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Parse month/year from selectedMonth (e.g., "January 2026")
+        const [monthName, yearStr] = selectedMonth.split(" ");
+        const monthNum = new Date(`${monthName} 1, ${yearStr}`).getMonth() + 1;
+        const year = parseInt(yearStr);
+
+        const [budgetsData, categoriesData] = await Promise.all([
+          api.getBudgets(userId, { month: monthNum, year }),
+          api.getCategories(userId),
+        ]);
+        
+        setBudgets(budgetsData);
+        setCategories(categoriesData.all || []);
+      } catch (err) {
+        setError(err.message);
+        toast({ 
+          title: "Failed to load budgets", 
+          description: err.message, 
+          variant: "destructive" 
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [selectedMonth, userId]);
 
   // TODO: Calculate spent from transactions when backend is ready
   // const calculateSpent = (budget, transactions) => {
@@ -123,13 +155,13 @@ export default function Budgets() {
 
   // Get category label
   const getCategoryLabel = (value) => {
-    const cat = CATEGORIES.find((c) => c.value === value);
+    const cat = categories.find((c) => c.value === value) || CATEGORIES.find((c) => c.value === value);
     return cat ? cat.label : value;
   };
 
   // Get category icon
   const getCategoryIcon = (value) => {
-    const cat = CATEGORIES.find((c) => c.value === value);
+    const cat = categories.find((c) => c.value === value) || CATEGORIES.find((c) => c.value === value);
     return cat ? cat.icon : "💰";
   };
 
@@ -167,7 +199,7 @@ export default function Budgets() {
   };
 
   // Handle save budget
-  const handleSaveBudget = (e) => {
+  const handleSaveBudget = async (e) => {
     e.preventDefault();
 
     if (!formData.category || !formData.amount) {
@@ -209,35 +241,78 @@ export default function Budgets() {
       return;
     }
 
-    const newBudget = {
-      id: Date.now(),
-      category: formData.category,
-      type: formData.type,
-      amount: parsedAmount,
-      spent: 0, // Initial spent is 0
-      startDate: formData.startDate,
-      alertThreshold: parsedThreshold,
-      otherDescription: formData.category === "others" ? formData.otherDescription : undefined,
-    };
+    // Create budget via API
+    try {
+      setIsLoading(true);
+      
+      // Convert YYYY-MM to YYYY-MM-DD format
+      const startDate = formData.startDate.includes('-') && formData.startDate.split('-').length === 2
+        ? `${formData.startDate}-01`
+        : formData.startDate;
+      
+      const newBudget = await api.createBudget({
+        user_id: userId,
+        category: formData.category,
+        budget_type: formData.type,
+        amount: parsedAmount,
+        start_date: startDate,
+        alert_threshold: parsedThreshold,
+        custom_category_name: formData.category === "others" ? formData.otherDescription : null,
+      });
 
-    setBudgets((prev) => [...prev, newBudget]);
-    setFormData({ 
-      type: "Monthly", 
-      category: "", 
-      amount: "", 
-      otherDescription: "",
-      startDate: new Date().toISOString().slice(0, 7),
-      alertThreshold: "80"
-    });
+      setBudgets((prev) => [...prev, newBudget]);
+      
+      // Refresh categories if custom category was added
+      if (formData.category === "others") {
+        const categoriesData = await api.getCategories(userId);
+        setCategories(categoriesData.all || []);
+      }
 
-    toast({ title: "Budget saved", description: `${getCategoryLabel(newBudget.category)} added for ${newBudget.type}.` });
+      setFormData({ 
+        type: "Monthly", 
+        category: "", 
+        amount: "", 
+        otherDescription: "",
+        startDate: new Date().toISOString().slice(0, 7),
+        alertThreshold: "80"
+      });
+
+      toast({ 
+        title: "Budget saved", 
+        description: `${getCategoryLabel(newBudget.category)} added for ${newBudget.budget_type}.` 
+      });
+    } catch (err) {
+      console.error('Budget creation error:', err);
+      toast({ 
+        title: "Failed to create budget", 
+        description: err.message || String(err), 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle delete budget
-  const handleDelete = (id) => {
-    setBudgets((prev) => prev.filter((b) => b.id !== id));
-
-    toast({ title: "Budget removed", description: "The category has been deleted.", variant: "destructive" });
+  const handleDelete = async (id) => {
+    try {
+      setIsLoading(true);
+      await api.deleteBudget(id, userId);
+      setBudgets((prev) => prev.filter((b) => b.id !== id));
+      toast({ 
+        title: "Budget removed", 
+        description: "The category has been deleted.", 
+        variant: "destructive" 
+      });
+    } catch (err) {
+      toast({ 
+        title: "Failed to delete budget", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const startEditing = (budget) => {
@@ -249,7 +324,7 @@ export default function Budgets() {
     });
   };
 
-  const handleUpdateBudget = (e, id) => {
+  const handleUpdateBudget = async (e, id) => {
     e.preventDefault();
     const parsed = parseFloat(editForm.amount);
     if (Number.isNaN(parsed) || parsed <= 0) {
@@ -271,11 +346,28 @@ export default function Budgets() {
       return;
     }
 
-    setBudgets((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, amount: parsed, type: editForm.type, alertThreshold: parsedThreshold } : b)),
-    );
-    setEditingId(null);
-    toast({ title: "Budget updated", description: "Limits adjusted for this category." });
+    try {
+      setIsLoading(true);
+      const updated = await api.updateBudget(id, userId, {
+        amount: parsed,
+        budget_type: editForm.type,
+        alert_threshold: parsedThreshold,
+      });
+
+      setBudgets((prev) =>
+        prev.map((b) => (b.id === id ? updated : b)),
+      );
+      setEditingId(null);
+      toast({ title: "Budget updated", description: "Limits adjusted for this category." });
+    } catch (err) {
+      toast({ 
+        title: "Failed to update budget", 
+        description: err.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -452,12 +544,12 @@ export default function Budgets() {
                       <span className="text-2xl">{getCategoryIcon(budget.category)}</span>
                       <div>
                         <p className="font-semibold">
-                          {getCategoryLabel(budget.category)}
-                          {budget.category === "others" && budget.otherDescription && (
-                            <span className="text-sm font-normal text-muted-foreground ml-2">({budget.otherDescription})</span>
+                          {budget.custom_category_name || getCategoryLabel(budget.category)}
+                          {budget.category === "others" && budget.custom_category_name && (
+                            <span className="text-sm font-normal text-muted-foreground ml-2">(Custom)</span>
                           )}
                         </p>
-                        <p className="text-xs text-muted-foreground">{budget.type} budget</p>
+                        <p className="text-xs text-muted-foreground">{budget.budget_type || budget.type} budget</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -607,6 +699,11 @@ export default function Budgets() {
                       </SelectTrigger>
                       <SelectContent>
                         {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.icon} {cat.label}
+                          </SelectItem>
+                        ))}
+                        {categories.filter(c => !CATEGORIES.some(pc => pc.value === c.value)).map((cat) => (
                           <SelectItem key={cat.value} value={cat.value}>
                             {cat.icon} {cat.label}
                           </SelectItem>
