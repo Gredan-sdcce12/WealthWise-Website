@@ -16,20 +16,6 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
 
-const categories = [
-  { value: "food", label: "Food & Dining", icon: "🍽️" },
-  { value: "transport", label: "Transport", icon: "🚗" },
-  { value: "bills", label: "Bills & Utilities", icon: "💡" },
-  { value: "rent", label: "Rent", icon: "🏠" },
-  { value: "shopping", label: "Shopping", icon: "🛍️" },
-  { value: "entertainment", label: "Entertainment", icon: "🎮" },
-  { value: "healthcare", label: "Healthcare", icon: "🏥" },
-  { value: "education", label: "Education", icon: "📚" },
-  { value: "emi", label: "EMI / Loans", icon: "💳" },
-  { value: "savings", label: "Savings & Investments", icon: "💰" },
-  { value: "others", label: "Others", icon: "📦" },
-];
-
 const paymentModes = [
   { value: "cash", label: "Cash" },
   { value: "card", label: "Card" },
@@ -41,6 +27,7 @@ const monthlyBudget = 25000;
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
   const [summary, setSummary] = useState({
@@ -86,10 +73,34 @@ export default function Transactions() {
 
   useEffect(() => {
     if (userId) {
+      fetchCategories();
       fetchTransactions();
       fetchSummary();
     }
   }, [userId, selectedMonth, filterCategory, filterPaymentMode, searchQuery]);
+
+  const fetchCategories = async () => {
+    try {
+      const data = await api.getCategories(userId);
+      setCategories(data.all || []);
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+      // Fallback to basic categories if API fails
+      setCategories([
+        { value: "food", label: "Food & Dining", icon: "🍽️" },
+        { value: "transport", label: "Transport", icon: "🚗" },
+        { value: "bills", label: "Bills & Utilities", icon: "💡" },
+        { value: "rent", label: "Rent", icon: "🏠" },
+        { value: "shopping", label: "Shopping", icon: "🛍️" },
+        { value: "entertainment", label: "Entertainment", icon: "🎮" },
+        { value: "healthcare", label: "Healthcare", icon: "🏥" },
+        { value: "education", label: "Education", icon: "📚" },
+        { value: "emi", label: "EMI / Loans", icon: "💳" },
+        { value: "savings", label: "Savings & Investments", icon: "💰" },
+        { value: "others", label: "Others", icon: "📦" },
+      ]);
+    }
+  };
 
   const fetchTransactions = async () => {
     try {
@@ -439,9 +450,23 @@ export default function Transactions() {
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.icon} {cat.label}
-                    </SelectItem>
+                    cat.subcategories ? (
+                      // Render Others with subcategories for filter
+                      <div key={cat.value}>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                          {cat.icon} {cat.label}
+                        </div>
+                        {cat.subcategories.map((subcat) => (
+                          <SelectItem key={subcat.value} value={subcat.value} className="pl-6">
+                            {subcat.icon} {subcat.label}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ) : (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.icon} {cat.label}
+                      </SelectItem>
+                    )
                   ))}
                 </SelectContent>
               </Select>
@@ -573,9 +598,24 @@ export default function Transactions() {
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.icon} {cat.label}
-                      </SelectItem>
+                      cat.subcategories ? (
+                        // Render Others with subcategories
+                        <div key={cat.value}>
+                          <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                            {cat.icon} {cat.label}
+                          </div>
+                          {cat.subcategories.map((subcat) => (
+                            <SelectItem key={subcat.value} value={subcat.value} className="pl-6">
+                              {subcat.icon} {subcat.label}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ) : (
+                        // Regular category
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.icon} {cat.label}
+                        </SelectItem>
+                      )
                     ))}
                   </SelectContent>
                 </Select>

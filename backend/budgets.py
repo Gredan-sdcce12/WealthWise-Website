@@ -278,7 +278,7 @@ def list_budgets(
 def get_all_categories(user_id: str):
 	"""Get all available categories including predefined and custom ones from budgets."""
 	
-	# Predefined categories
+	# Predefined categories (excluding 'others' - it will be added with subcategories)
 	predefined = [
 		{"value": "food", "label": "Food & Groceries", "icon": "🍽️"},
 		{"value": "transport", "label": "Transport", "icon": "🚗"},
@@ -296,26 +296,42 @@ def get_all_categories(user_id: str):
 	conn = get_db_connection()
 	try:
 		with conn.cursor() as cur:
+			# Query all budgets with category='others' to get custom categories
 			cur.execute(
 				"""
-				SELECT DISTINCT custom_category_name
+				SELECT DISTINCT TRIM(custom_category_name) AS custom_name
 				FROM budgets
-				WHERE user_id = %s AND category = 'others' AND custom_category_name IS NOT NULL
-				ORDER BY custom_category_name;
+				WHERE user_id = %s 
+					AND LOWER(category) = 'others' 
+					AND custom_category_name IS NOT NULL
+					AND TRIM(custom_category_name) != ''
+				ORDER BY custom_name;
 				""",
 				(user_id,),
 			)
 			rows = cur.fetchall()
 		
 		custom_categories = [
-			{"value": row[0].lower().replace(" ", "_"), "label": row[0], "icon": "📦"}
+			{"value": row[0], "label": row[0], "icon": "📦"}
 			for row in rows
 		]
+		
+		# Debug: Print to console to verify categories are being fetched
+		print(f"DEBUG: Fetched {len(custom_categories)} custom categories for user {user_id}: {custom_categories}")
+		
+		# Create 'Others' with subcategories
+		others_group = {
+			"value": "others",
+			"label": "Others",
+			"icon": "📦",
+			"subcategories": custom_categories
+		}
 		
 		return {
 			"predefined": predefined,
 			"custom": custom_categories,
-			"all": predefined + custom_categories
+			"others": others_group,
+			"all": predefined + [others_group] if custom_categories else predefined + [{"value": "others", "label": "Others", "icon": "📦"}]
 		}
 	except Exception as exc:
 		raise HTTPException(status_code=500, detail=f"Failed to fetch categories: {exc}") from exc
