@@ -86,6 +86,87 @@ def _row_to_transaction(row: tuple) -> Dict[str, Any]:
 	}
 
 
+def _check_budget_warning(user_id: str, category: str, new_amount: float, txn_date: date) -> Dict[str, Any]:
+	"""Check if adding this transaction would exceed budget threshold or limit."""
+	if not category:
+		return {}
+	
+	conn = get_db_connection()
+	try:
+		with conn.cursor() as cur:
+			# Find active budget for this category and date
+			cur.execute(
+				"""
+				SELECT id, budget_type, amount, alert_threshold, start_date
+				FROM budgets
+				WHERE user_id = %s AND category = %s
+				ORDER BY created_at DESC
+				LIMIT 1;
+				""",
+				(user_id, category),
+			)
+			budget_row = cur.fetchone()
+			
+			if not budget_row:
+				return {}  # No budget for this category
+			
+			budget_id, budget_type, budget_amount, alert_threshold, start_date = budget_row
+			
+			# Calculate current spent for this budget period
+			if budget_type == "Monthly":
+				cur.execute(
+					"""
+					SELECT COALESCE(SUM(amount), 0)
+					FROM transactions
+					WHERE user_id = %s 
+						AND category = %s 
+						AND txn_type = 'expense'
+						AND month = %s 
+						AND year = %s;
+					""",
+					(user_id, category, txn_date.month, txn_date.year),
+				)
+			else:  # Weekly
+				from datetime import timedelta
+				end_date = start_date + timedelta(days=7)
+				cur.execute(
+					"""
+					SELECT COALESCE(SUM(amount), 0)
+					FROM transactions
+					WHERE user_id = %s 
+						AND category = %s 
+						AND txn_type = 'expense'
+						AND txn_date >= %s 
+						AND txn_date < %s;
+					""",
+					(user_id, category, start_date, end_date),
+				)
+			
+			current_spent = float(cur.fetchone()[0])
+			new_total = current_spent + new_amount
+			percentage = (new_total / budget_amount) * 100
+			
+			warning_data = {
+				"budget_id": budget_id,
+				"budget_amount": float(budget_amount),
+				"current_spent": current_spent,
+				"new_total": new_total,
+				"percentage": round(percentage, 1),
+				"alert_threshold": alert_threshold,
+			}
+			
+			if percentage >= 100:
+				warning_data["warning"] = "budget_exceeded"
+				warning_data["message"] = f"⚠️ Budget exceeded! You've spent ₹{new_total:.2f} of ₹{budget_amount:.2f} ({percentage:.1f}%)"
+			elif percentage >= alert_threshold:
+				warning_data["warning"] = "threshold_exceeded"
+				warning_data["message"] = f"⚠️ Alert: You've reached {percentage:.1f}% of your {category} budget (₹{new_total:.2f}/₹{budget_amount:.2f})"
+			
+			return warning_data
+	finally:
+		conn.close()
+
+
 # --- Routes ------------------------------------------------------------------
 
 
@@ -94,6 +175,11 @@ def create_transaction(payload: TransactionCreate):
 	txn_dt = payload.txn_date or datetime.utcnow().date()
 	month = txn_dt.month
 	year = txn_dt.year
+
+	# Check budget warning for expenses
+	budget_warning = {}
+	if payload.txn_type == "expense" and payload.category:
+		budget_warning = _check_budget_warning(user_id, payload.category, payload.amount, txn_dt)
 
 	conn = get_db_connection()
 	try:
@@ -120,7 +206,14 @@ def create_transaction(payload: TransactionCreate):
 			)
 			row = cur.fetchone()
 		conn.commit()
-		return _row_to_transaction(row)
+		
+		result = _row_to_transaction(row)
+		
+		# Add budget warning to response if present
+		if budget_warning:
+			result["budget_warning"] = budget_warning
+		
+		return result
 	except Exception as exc:  # pragma: no cover - runtime guard
 		conn.rollback()
 		raise HTTPException(status_code=500, detail=f"Failed to create transaction: {exc}") from exc

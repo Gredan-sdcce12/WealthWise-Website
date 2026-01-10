@@ -220,7 +220,7 @@ export default function Transactions() {
         txn_date: formData.date,
       };
 
-      await api.createTransaction(payload);
+      const response = await api.createTransaction(payload);
       
       setFormData({
         amount: "",
@@ -231,7 +231,19 @@ export default function Transactions() {
         paymentMode: "",
       });
       setShowAddDialog(false);
-      toast({ title: "Success", description: "Transaction created successfully" });
+      
+      // Check for budget warning in response
+      if (response.budget_warning && response.budget_warning.warning) {
+        const warning = response.budget_warning;
+        toast({ 
+          title: warning.warning === "budget_exceeded" ? "⚠️ Budget Exceeded!" : "⚠️ Budget Alert",
+          description: warning.message,
+          variant: warning.warning === "budget_exceeded" ? "destructive" : "default",
+          duration: 6000,
+        });
+      } else {
+        toast({ title: "Success", description: "Transaction created successfully" });
+      }
       
       // Refresh data
       fetchTransactions();
