@@ -81,7 +81,7 @@ export default function Transactions() {
 
   const fetchCategories = async () => {
     try {
-      const data = await api.getCategories(userId);
+      const data = await api.getCategories();
       setCategories(data.all || []);
     } catch (err) {
       console.error("Failed to fetch categories:", err);
@@ -118,7 +118,7 @@ export default function Transactions() {
       if (filterPaymentMode !== 'all') filters.payment_mode = filterPaymentMode;
       if (searchQuery) filters.search = searchQuery;
 
-      const data = await api.getTransactions(userId, filters);
+      const data = await api.getTransactions(filters);
       
       // Transform API response to match component format
       const formatted = data.map(t => ({
@@ -143,7 +143,7 @@ export default function Transactions() {
   const fetchSummary = async () => {
     try {
       const [year, month] = selectedMonth.split('-');
-      const data = await api.getTransactionSummary(userId, parseInt(month), parseInt(year));
+      const data = await api.getTransactionSummary(parseInt(month), parseInt(year));
       setSummary(data);
     } catch (error) {
       console.error('Failed to fetch summary:', error);
@@ -211,7 +211,6 @@ export default function Transactions() {
   const createTransaction = async () => {
     try {
       const payload = {
-        user_id: userId,
         amount: parseFloat(formData.amount),
         txn_type: formData.type,
         category: formData.category,
@@ -252,7 +251,7 @@ export default function Transactions() {
         txn_date: formData.date,
       };
 
-      await api.updateTransaction(editingId, userId, payload);
+      await api.updateTransaction(editingId, payload);
       
       setEditingId(null);
       setFormData({
@@ -281,7 +280,7 @@ export default function Transactions() {
 
   const deleteTransaction = async (id) => {
     try {
-      await api.deleteTransaction(id, userId);
+      await api.deleteTransaction(id);
       toast({ title: "Deleted", description: "Transaction removed" });
       
       // Refresh data

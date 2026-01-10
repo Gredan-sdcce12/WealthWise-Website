@@ -96,12 +96,14 @@ export default function DashboardHome() {
       try {
         const { data } = await supabase.auth.getSession();
         if (!active) return;
-        const uid = data?.session?.user?.id;
-        if (!uid) {
+        const token = data?.session?.access_token;
+        if (!token) {
           return;
         }
 
-        const res = await fetch(`${API_BASE}/income/latest/${uid}`);
+        const res = await fetch(`${API_BASE}/income/latest`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) throw new Error(`Income fetch failed (${res.status})`);
         const body = await res.json();
         if (body?.amount !== null && body?.amount !== undefined) {
@@ -133,13 +135,15 @@ export default function DashboardHome() {
       try {
         const { data } = await supabase.auth.getSession();
         if (!active) return;
-        const uid = data?.session?.user?.id;
-        if (!uid) {
+        const token = data?.session?.access_token;
+        if (!token) {
           setIsLoadingMonthlyTotal(false);
           return;
         }
 
-        const res = await fetch(`${API_BASE}/income/total/${uid}`);
+        const res = await fetch(`${API_BASE}/income/total`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) throw new Error(`Income total fetch failed (${res.status})`);
         const body = await res.json();
         setMonthlyIncomeTotal(typeof body.total === "number" ? body.total : 0);

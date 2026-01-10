@@ -1,16 +1,5 @@
-# fastapi
-# uvicorn
-# psycopg2-binary
-# python-dotenv
-
-
-python -m venv venv
-venv\Scripts\activate     # Windows
-
-📦 Install required packages
-
-In terminal:
-
-pip install fastapi uvicorn psycopg2-binary python-dotenv
-
-# uvicorn main:app --reload
+fastapi
+uvicorn
+psycopg2-binary
+python-dotenv
+PyJWT

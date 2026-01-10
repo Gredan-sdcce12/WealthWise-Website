@@ -93,8 +93,8 @@ export default function Budgets() {
         const year = parseInt(yearStr);
 
         const [budgetsData, categoriesData] = await Promise.all([
-          api.getBudgets(userId, { month: monthNum, year }),
-          api.getCategories(userId),
+          api.getBudgets({ month: monthNum, year }),
+          api.getCategories(),
         ]);
         
         setBudgets(budgetsData);
@@ -251,7 +251,6 @@ export default function Budgets() {
         : formData.startDate;
       
       const newBudget = await api.createBudget({
-        user_id: userId,
         category: formData.category,
         budget_type: formData.type,
         amount: parsedAmount,
@@ -264,7 +263,7 @@ export default function Budgets() {
       
       // Refresh categories if custom category was added
       if (formData.category === "others") {
-        const categoriesData = await api.getCategories(userId);
+        const categoriesData = await api.getCategories();
         setCategories(categoriesData.all || []);
       }
 
@@ -297,7 +296,7 @@ export default function Budgets() {
   const handleDelete = async (id) => {
     try {
       setIsLoading(true);
-      await api.deleteBudget(id, userId);
+      await api.deleteBudget(id);
       setBudgets((prev) => prev.filter((b) => b.id !== id));
       toast({ 
         title: "Budget removed", 
@@ -348,7 +347,7 @@ export default function Budgets() {
 
     try {
       setIsLoading(true);
-      const updated = await api.updateBudget(id, userId, {
+      const updated = await api.updateBudget(id, {
         amount: parsed,
         budget_type: editForm.type,
         alert_threshold: parsedThreshold,

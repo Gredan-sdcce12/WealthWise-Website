@@ -3,9 +3,10 @@
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
 
+from auth import get_current_user_id
 from database import get_db_connection
 
 
@@ -13,7 +14,6 @@ router = APIRouter(prefix="/budgets", tags=["budgets"])
 
 
 class BudgetCreate(BaseModel):
-	user_id: str
 	category: str
 	budget_type: str
 	amount: float
@@ -161,7 +161,7 @@ def _calculate_spent_for_budget(user_id: str, category: str, budget_type: str, s
 
 
 @router.post("/")
-def create_budget(payload: BudgetCreate):
+def create_budget(payload: BudgetCreate, user_id: str = Depends(get_current_user_id)):
 	"""Create a new budget."""
 	conn = get_db_connection()
 	try:
@@ -175,7 +175,7 @@ def create_budget(payload: BudgetCreate):
 				RETURNING id, user_id, category, budget_type, amount, start_date, alert_threshold, custom_category_name, created_at, updated_at;
 				""",
 				(
-					payload.user_id,
+					user_id,
 					payload.category,
 					payload.budget_type,
 					payload.amount,
@@ -190,7 +190,7 @@ def create_budget(payload: BudgetCreate):
 		
 		# Add spent amount
 		spent = _calculate_spent_for_budget(
-			payload.user_id, 
+			user_id, 
 			payload.custom_category_name if payload.category == "others" else payload.category,
 			payload.budget_type, 
 			payload.start_date
@@ -213,11 +213,11 @@ def create_budget(payload: BudgetCreate):
 
 @router.get("/")
 def list_budgets(
-	user_id: str,
 	category: Optional[str] = None,
 	budget_type: Optional[str] = None,
 	month: Optional[int] = None,
 	year: Optional[int] = None,
+	user_id: str = Depends(get_current_user_id),
 ):
 	"""List all budgets for a user with optional filters."""
 	where_clauses: List[str] = ["user_id = %s"]
@@ -275,7 +275,7 @@ def list_budgets(
 
 
 @router.get("/categories")
-def get_all_categories(user_id: str):
+def get_all_categories(user_id: str = Depends(get_current_user_id)):
 	"""Get all available categories including predefined and custom ones from budgets."""
 	
 	# Predefined categories (excluding 'others' - it will be added with subcategories)
@@ -340,7 +340,7 @@ def get_all_categories(user_id: str):
 
 
 @router.get("/{budget_id}")
-def get_budget(budget_id: int, user_id: str):
+def get_budget(budget_id: int, user_id: str = Depends(get_current_user_id)):
 	"""Get a specific budget by ID."""
 	conn = get_db_connection()
 	try:
@@ -375,7 +375,7 @@ def get_budget(budget_id: int, user_id: str):
 
 
 @router.put("/{budget_id}")
-def update_budget(budget_id: int, user_id: str, payload: BudgetUpdate):
+def update_budget(budget_id: int, payload: BudgetUpdate, user_id: str = Depends(get_current_user_id)):
 	"""Update an existing budget."""
 	set_clauses: List[str] = []
 	params: List[Any] = []
@@ -441,7 +441,7 @@ def update_budget(budget_id: int, user_id: str, payload: BudgetUpdate):
 
 
 @router.delete("/{budget_id}")
-def delete_budget(budget_id: int, user_id: str):
+def delete_budget(budget_id: int, user_id: str = Depends(get_current_user_id)):
 	"""Delete a budget."""
 	conn = get_db_connection()
 	try:

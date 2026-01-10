@@ -3,9 +3,10 @@
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
 
+from auth import get_current_user_id
 from database import get_db_connection
 
 
@@ -13,7 +14,6 @@ router = APIRouter(prefix="/income", tags=["income"])
 
 
 class IncomeCreate(BaseModel):
-	user_id: str
 	amount: float
 	income_type: str
 	source: Optional[str] = None
@@ -77,16 +77,20 @@ def _fetch_monthly_total(user_id: str, month: int, year: int) -> float:
 		conn.close()
 
 
-@router.get("/latest/{user_id}")
-def get_latest_income(user_id: str):
+@router.get("/latest")
+def get_latest_income(user_id: str = Depends(get_current_user_id)):
 	income = _fetch_latest_income(user_id)
 	if not income:
 		return {"amount": None, "income_type": None}
 	return income
 
 
-@router.get("/total/{user_id}")
-def get_income_total(user_id: str, month: int | None = None, year: int | None = None):
+@router.get("/total")
+def get_income_total(
+	user_id: str = Depends(get_current_user_id),
+	month: int | None = None,
+	year: int | None = None,
+):
 	"""Return summed income for the specified month/year (defaults to current)."""
 	current = datetime.utcnow()
 	month = month or current.month
@@ -99,7 +103,7 @@ def get_income_total(user_id: str, month: int | None = None, year: int | None = 
 
 
 @router.post("/")
-def create_income(payload: IncomeCreate):
+def create_income(payload: IncomeCreate, user_id: str = Depends(get_current_user_id)):
 	current_date = payload.received_date or datetime.utcnow().date()
 	month = current_date.month
 	year = current_date.year
@@ -114,7 +118,7 @@ def create_income(payload: IncomeCreate):
 				RETURNING id, amount, income_type, source, note, received_date, month, year;
 				""",
 				(
-					payload.user_id,
+					user_id,
 					payload.amount,
 					payload.income_type,
 					payload.source,
@@ -128,7 +132,7 @@ def create_income(payload: IncomeCreate):
 		conn.commit()
 		return {
 			"id": new_id,
-			"user_id": payload.user_id,
+			"user_id": user_id,
 			"amount": float(amount),
 			"income_type": income_type,
 			"source": source,
@@ -144,8 +148,8 @@ def create_income(payload: IncomeCreate):
 		conn.close()
 
 
-@router.post("/same-as-previous/{user_id}")
-def copy_previous_income(user_id: str):
+@router.post("/same-as-previous")
+def copy_previous_income(user_id: str = Depends(get_current_user_id)):
 	"""Return the most recent income without inserting a new record.
 
 	Used when the user taps "Same as previous" and only wants to reuse the data

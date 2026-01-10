@@ -26,9 +26,12 @@ export function DashboardLayout() {
       if (month) params.set("month", month);
       if (year) params.set("year", year);
       const query = params.toString();
-      const url = `${API_BASE}/income/total/${uid}${query ? `?${query}` : ""}`;
+      const url = `${API_BASE}/income/total${query ? `?${query}` : ""}`;
       try {
-        const res = await fetch(url);
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(url, { headers });
         if (!res.ok) throw new Error(`Income total fetch failed (${res.status})`);
         const body = await res.json();
         setMonthlyIncomeTotal(typeof body.total === "number" ? body.total : 0);
@@ -50,9 +53,11 @@ export function DashboardLayout() {
         if (!active) return;
         const uid = data?.session?.user?.id;
         if (!uid) return;
+        const token = data?.session?.access_token;
         setUserId(uid);
 
-        const res = await fetch(`${API_BASE}/income/latest/${uid}`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API_BASE}/income/latest`, { headers });
         if (!res.ok) {
           throw new Error(`Income check failed (${res.status})`);
         }
@@ -82,11 +87,13 @@ export function DashboardLayout() {
       if (!userId) throw new Error("User not available");
       try {
         setIsSavingIncome(true);
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch(`${API_BASE}/income`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...headers },
           body: JSON.stringify({
-            user_id: userId,
             amount,
             income_type,
             source,
@@ -118,8 +125,12 @@ export function DashboardLayout() {
     if (!userId) throw new Error("User not available");
     try {
       setIsSavingIncome(true);
-      const res = await fetch(`${API_BASE}/income/same-as-previous/${userId}`, {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(`${API_BASE}/income/same-as-previous`, {
         method: "POST",
+        headers,
       });
       if (!res.ok) {
         const detail = await res.text();

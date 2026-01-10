@@ -1,5 +1,7 @@
 // API client for WealthWise backend
 
+import { supabase } from './supabase';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 class ApiClient {
@@ -7,19 +9,28 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
+  async withAuthHeaders(headers = {}) {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    return token
+      ? { Authorization: `Bearer ${token}`, ...headers }
+      : headers;
+  }
+
   async request(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
+    const authHeaders = await this.withAuthHeaders(options.headers);
     const config = {
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...authHeaders,
       },
       ...options,
     };
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}`;
         try {
@@ -51,34 +62,32 @@ class ApiClient {
     });
   }
 
-  async getTransactions(userId, filters = {}) {
+  async getTransactions(filters = {}) {
     const params = new URLSearchParams({
-      user_id: userId,
       ...filters,
     });
     return this.request(`/transactions?${params}`);
   }
 
-  async getTransaction(txnId, userId) {
-    return this.request(`/transactions/${txnId}?user_id=${userId}`);
+  async getTransaction(txnId) {
+    return this.request(`/transactions/${txnId}`);
   }
 
-  async updateTransaction(txnId, userId, data) {
-    return this.request(`/transactions/${txnId}?user_id=${userId}`, {
+  async updateTransaction(txnId, data) {
+    return this.request(`/transactions/${txnId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteTransaction(txnId, userId) {
-    return this.request(`/transactions/${txnId}?user_id=${userId}`, {
+  async deleteTransaction(txnId) {
+    return this.request(`/transactions/${txnId}`, {
       method: 'DELETE',
     });
   }
 
-  async getTransactionSummary(userId, month, year) {
+  async getTransactionSummary(month, year) {
     const params = new URLSearchParams({
-      user_id: userId,
       ...(month && { month }),
       ...(year && { year }),
     });
@@ -93,33 +102,32 @@ class ApiClient {
     });
   }
 
-  async getBudgets(userId, filters = {}) {
+  async getBudgets(filters = {}) {
     const params = new URLSearchParams({
-      user_id: userId,
       ...filters,
     });
     return this.request(`/budgets/?${params}`);
   }
 
-  async getBudget(budgetId, userId) {
-    return this.request(`/budgets/${budgetId}?user_id=${userId}`);
+  async getBudget(budgetId) {
+    return this.request(`/budgets/${budgetId}`);
   }
 
-  async updateBudget(budgetId, userId, data) {
-    return this.request(`/budgets/${budgetId}?user_id=${userId}`, {
+  async updateBudget(budgetId, data) {
+    return this.request(`/budgets/${budgetId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   }
 
-  async deleteBudget(budgetId, userId) {
-    return this.request(`/budgets/${budgetId}?user_id=${userId}`, {
+  async deleteBudget(budgetId) {
+    return this.request(`/budgets/${budgetId}`, {
       method: 'DELETE',
     });
   }
 
-  async getCategories(userId) {
-    return this.request(`/budgets/categories?user_id=${userId}`);
+  async getCategories() {
+    return this.request('/budgets/categories');
   }
 }
 

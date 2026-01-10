@@ -3,9 +3,10 @@
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, field_validator
 
+from auth import get_current_user_id
 from database import get_db_connection
 
 
@@ -13,7 +14,6 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 
 class TransactionCreate(BaseModel):
-	user_id: str
 	amount: float
 	txn_type: str
 	category: Optional[str] = None
@@ -90,7 +90,7 @@ def _row_to_transaction(row: tuple) -> Dict[str, Any]:
 
 
 @router.post("/")
-def create_transaction(payload: TransactionCreate):
+def create_transaction(payload: TransactionCreate, user_id: str = Depends(get_current_user_id)):
 	txn_dt = payload.txn_date or datetime.utcnow().date()
 	month = txn_dt.month
 	year = txn_dt.year
@@ -107,7 +107,7 @@ def create_transaction(payload: TransactionCreate):
 				RETURNING id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, created_at, updated_at;
 				""",
 				(
-					payload.user_id,
+					user_id,
 					payload.amount,
 					payload.txn_type,
 					payload.category,
@@ -130,7 +130,6 @@ def create_transaction(payload: TransactionCreate):
 
 @router.get("/")
 def list_transactions(
-	user_id: str,
 	start_date: Optional[date] = None,
 	end_date: Optional[date] = None,
 	category: Optional[str] = None,
@@ -138,6 +137,7 @@ def list_transactions(
 	search: Optional[str] = None,
 	limit: int = Query(50, ge=1, le=200),
 	offset: int = Query(0, ge=0),
+	user_id: str = Depends(get_current_user_id),
 ):
 	where_clauses: List[str] = ["user_id = %s"]
 	params: List[Any] = [user_id]
@@ -182,7 +182,11 @@ def list_transactions(
 
 
 @router.get("/summary")
-def transaction_summary(user_id: str, month: int | None = None, year: int | None = None):
+def transaction_summary(
+	month: int | None = None,
+	year: int | None = None,
+	user_id: str = Depends(get_current_user_id),
+):
 	current = datetime.utcnow()
 	month = month or current.month
 	year = year or current.year
@@ -231,7 +235,7 @@ def transaction_summary(user_id: str, month: int | None = None, year: int | None
 
 
 @router.get("/{txn_id}")
-def get_transaction(txn_id: int, user_id: str):
+def get_transaction(txn_id: int, user_id: str = Depends(get_current_user_id)):
 	conn = get_db_connection()
 	try:
 		with conn.cursor() as cur:
@@ -252,7 +256,7 @@ def get_transaction(txn_id: int, user_id: str):
 
 
 @router.put("/{txn_id}")
-def update_transaction(txn_id: int, user_id: str, payload: TransactionUpdate):
+def update_transaction(txn_id: int, payload: TransactionUpdate, user_id: str = Depends(get_current_user_id)):
 	set_clauses: List[str] = []
 	params: List[Any] = []
 
@@ -308,7 +312,7 @@ def update_transaction(txn_id: int, user_id: str, payload: TransactionUpdate):
 
 
 @router.delete("/{txn_id}")
-def delete_transaction(txn_id: int, user_id: str):
+def delete_transaction(txn_id: int, user_id: str = Depends(get_current_user_id)):
 	conn = get_db_connection()
 	try:
 		with conn.cursor() as cur:
