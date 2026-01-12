@@ -1,17 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
-import { AddIncomeDialog } from "@/components/dialogs/AddIncomeDialog";
 import { supabase } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 
 const API_BASE = "http://127.0.0.1:8000";
 
 export function DashboardLayout() {
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [showIncomePrompt, setShowIncomePrompt] = useState(false);
-  const [allowUsePrevious, setAllowUsePrevious] = useState(false);
   const [userId, setUserId] = useState(null);
   const [latestIncome, setLatestIncome] = useState(null);
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
@@ -61,12 +59,9 @@ export function DashboardLayout() {
         if (hasIncome) {
           setLatestIncome(body);
         }
-        setAllowUsePrevious(hasIncome);
         await fetchMonthlyIncomeTotal(uid); // Fetch monthly income total
-        setShowIncomePrompt(true);
       } catch (err) {
         toast({ title: "Unable to check income", description: err?.message || "Please try again." });
-        setShowIncomePrompt(true);
       }
     };
 
@@ -100,9 +95,7 @@ export function DashboardLayout() {
         }
         const created = await res.json();
         setLatestIncome(created);
-        setAllowUsePrevious(true);
         await fetchMonthlyIncomeTotal(userId, created.month, created.year);
-        setShowIncomePrompt(false);
         toast({ title: "Income saved", description: "You're good to go." });
       } catch (err) {
         toast({ title: "Income not saved", description: err?.message || "Please try again." });
@@ -127,8 +120,6 @@ export function DashboardLayout() {
       }
       const created = await res.json();
       setLatestIncome(created);
-      setAllowUsePrevious(true);
-      setShowIncomePrompt(false);
       toast({ title: "Income copied", description: "Using your previous income." });
     } catch (err) {
       toast({ title: "Unable to reuse income", description: err?.message || "Please try again." });
@@ -155,7 +146,6 @@ export function DashboardLayout() {
           <Outlet
             context={{
               latestIncome,
-              allowUsePrevious,
               handleSaveIncome,
               handleCopyPrevious,
               monthlyIncomeTotal,
@@ -165,16 +155,6 @@ export function DashboardLayout() {
           />
         </main>
       </div>
-
-      <AddIncomeDialog
-        open={showIncomePrompt}
-        onOpenChange={setShowIncomePrompt}
-        allowUsePrevious={allowUsePrevious}
-        onSubmit={handleSaveIncome}
-        onUsePrevious={allowUsePrevious ? handleCopyPrevious : undefined}
-        previousIncome={latestIncome}
-        loading={isSavingIncome}
-      />
     </div>
   );
 }
