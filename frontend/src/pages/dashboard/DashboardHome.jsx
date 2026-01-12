@@ -188,6 +188,7 @@ export default function DashboardHome() {
           onUsePrevious={allowUsePrevious || sharedAllowUsePrevious ? sharedCopyIncome : undefined}
           previousIncome={sharedIncome || latestIncome}
           loading={Boolean(sharedSaving)}
+          showTrigger={false}
         />
       </div>
 

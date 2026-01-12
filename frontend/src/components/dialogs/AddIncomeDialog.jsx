@@ -30,6 +30,7 @@ export function AddIncomeDialog({
   onUsePrevious,
   previousIncome = null,
   loading = false,
+  showTrigger = true,
 }) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const [formData, setFormData] = useState(() => ({
@@ -163,9 +164,11 @@ export function AddIncomeDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || <Button variant="hero"><Plus className="w-4 h-4 mr-2" />Add Income</Button>}
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          {trigger || <Button variant="hero"><Plus className="w-4 h-4 mr-2" />Add Income</Button>}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Income</DialogTitle>
