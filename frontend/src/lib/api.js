@@ -129,6 +129,42 @@ class ApiClient {
   async getCategories() {
     return this.request('/budgets/categories');
   }
+
+  // Goal endpoints
+  async createGoal(data) {
+    return this.request('/goals', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getGoals() {
+    return this.request('/goals');
+  }
+
+  async getGoal(goalId) {
+    return this.request(`/goals/${goalId}`);
+  }
+
+  async updateGoal(goalId, data) {
+    return this.request(`/goals/${goalId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteGoal(goalId) {
+    return this.request(`/goals/${goalId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async addSavingsToGoal(goalId, data) {
+    return this.request(`/goals/${goalId}/savings`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);

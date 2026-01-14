@@ -31,6 +31,16 @@ export function AddGoalDialog({ trigger, availableBalance = 0, onCreate }) {
     const current = Number(formData.currentAmount) || 0;
     const months = Number(formData.timePeriodMonths);
 
+    if (!formData.name.trim()) {
+      toast({ title: "Enter a goal name", variant: "destructive" });
+      return;
+    }
+
+    if (!formData.category) {
+      toast({ title: "Select a category", variant: "destructive" });
+      return;
+    }
+
     if (!Number.isFinite(target) || target <= 0) {
       toast({ title: "Enter a target amount", variant: "destructive" });
       return;
@@ -60,11 +70,11 @@ export function AddGoalDialog({ trigger, availableBalance = 0, onCreate }) {
     }
 
     const goalPayload = {
-      name: formData.name.trim() || "New Goal",
+      name: formData.name.trim(),
       targetAmount: target,
       currentAmount: current,
       timePeriodMonths: months,
-      category: formData.category || "general",
+      category: formData.category,
       priority: formData.priority,
       monthlySaving,
     };

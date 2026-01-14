@@ -7,6 +7,7 @@ from database import get_db_connection
 from income import router as income_router
 from transactions import router as transactions_router
 from budgets import router as budgets_router
+from goals import router as goals_router
 
 
 app = FastAPI(title="WealthWise Backend")
@@ -31,6 +32,7 @@ app.add_middleware(
 app.include_router(income_router)
 app.include_router(transactions_router)
 app.include_router(budgets_router)
+app.include_router(goals_router)
 
 
 @app.get("/")

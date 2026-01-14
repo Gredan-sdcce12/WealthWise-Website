@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -10,6 +10,7 @@ import { Target, Calendar, Wallet, Sparkles, CheckCircle2, Trash2, Edit2, AlertC
 import { toast } from "@/hooks/use-toast";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
 import { AddFundsDialog } from "@/components/dialogs/AddFundsDialog";
+import { api } from "@/lib/api";
 
 const CATEGORY_META = {
   emergency: { icon: "🛡️", color: "hsl(160, 84%, 39%)" },
@@ -42,21 +43,38 @@ const getMonthsRemaining = (deadline) => {
 export default function Goals() {
   const [incomeTotal] = useState(50000);
   const [expenseTotal] = useState(32000);
-  const [activeGoals, setActiveGoals] = useState(initialActiveGoals);
-  const [completedGoals, setCompletedGoals] = useState(initialCompletedGoals);
+  const [activeGoals, setActiveGoals] = useState([]);
+  const [completedGoals, setCompletedGoals] = useState([]);
+  const [availableBalance, setAvailableBalance] = useState(0);
+
+  useEffect(() => {
+    const fetchGoals = async () => {
+      try {
+        const data = await api.getGoals();
+        const allGoals = data.goals || [];
+        const now = new Date();
+        const active = allGoals.filter(g => new Date(g.deadline) > now && g.current_amount < g.target_amount);
+        const completed = allGoals.filter(g => g.current_amount >= g.target_amount);
+        setActiveGoals(active);
+        setCompletedGoals(completed);
+        setAvailableBalance(data.available_balance || 0);
+      } catch (error) {
+        console.error("Failed to fetch goals:", error);
+        toast({ title: "Error fetching goals", description: error.message, variant: "destructive" });
+      }
+    };
+    fetchGoals();
+  }, []);
 
   const totals = useMemo(() => {
-    const saved = activeGoals.reduce((acc, g) => acc + g.saved, 0);
-    const target = activeGoals.reduce((acc, g) => acc + g.targetAmount, 0);
+    const saved = activeGoals.reduce((acc, g) => acc + g.current_amount, 0);
+    const target = activeGoals.reduce((acc, g) => acc + g.target_amount, 0);
     return { saved, target };
   }, [activeGoals]);
 
   const derivedAvailableBalance = useMemo(() => {
-    const net = incomeTotal - expenseTotal;
-    // Reserve the remaining gap for each goal so we don't over-allocate beyond plan
-    const reservedGaps = activeGoals.reduce((acc, g) => acc + Math.max(g.targetAmount - g.saved, 0), 0);
-    return Math.max(net - reservedGaps, 0);
-  }, [incomeTotal, expenseTotal, activeGoals]);
+    return availableBalance;
+  }, [availableBalance]);
 
   const statusToneClass = {
     emerald: "bg-emerald-100 text-emerald-700 border-emerald-200",
@@ -65,9 +83,9 @@ export default function Goals() {
   };
 
   const paceStatus = (goal, monthsRemaining) => {
-    if (goal.saved >= goal.targetAmount) return { label: "Completed", tone: "emerald" };
-    const progress = goal.targetAmount ? goal.saved / goal.targetAmount : 0;
-    const totalMonths = goal.timeframeMonths || monthsRemaining || 1;
+    if (goal.current_amount >= goal.target_amount) return { label: "Completed", tone: "emerald" };
+    const progress = goal.target_amount ? goal.current_amount / goal.target_amount : 0;
+    const totalMonths = monthsRemaining || 1;
     const elapsedMonths = Math.max(totalMonths - monthsRemaining, 0);
     const timeProgress = totalMonths ? elapsedMonths / totalMonths : 0;
     const pace = timeProgress > 0 ? progress / timeProgress : progress;
@@ -77,67 +95,92 @@ export default function Goals() {
     return { label: "At Risk", tone: "destructive" };
   };
 
-  const handleAddGoal = (goalPayload) => {
-    const categoryMeta = CATEGORY_META[goalPayload.category] || CATEGORY_META.other;
-    const deadlineDate = new Date();
-    deadlineDate.setMonth(deadlineDate.getMonth() + goalPayload.timePeriodMonths);
+  const handleAddGoal = async (goalPayload) => {
+    try {
+      const deadlineDate = new Date();
+      deadlineDate.setMonth(deadlineDate.getMonth() + goalPayload.timePeriodMonths);
 
-    const newGoal = {
-      id: Date.now(),
-      name: goalPayload.name,
-      category: goalPayload.category,
-      targetAmount: goalPayload.targetAmount,
-      saved: goalPayload.currentAmount || 0,
-      timeframeMonths: goalPayload.timePeriodMonths,
-      deadline: deadlineDate.toISOString().split("T")[0],
-      icon: categoryMeta.icon,
-      color: categoryMeta.color,
-    };
-
-    setActiveGoals((prev) => [...prev, newGoal]);
-  };
-
-  const handleAddSavings = (goalId, payload) => {
-    setActiveGoals((prev) => {
-      const updated = prev.map((goal) => goal.id === goalId ? { ...goal, saved: goal.saved + payload.amount } : goal);
-      const remaining = [];
-      const newlyCompleted = [];
-
-      updated.forEach((goal) => {
-        if (goal.saved >= goal.targetAmount) {
-          newlyCompleted.push({ ...goal, completedOn: payload.date, saved: goal.saved });
-        } else {
-          remaining.push(goal);
-        }
+      const response = await api.createGoal({
+        name: goalPayload.name,
+        category: goalPayload.category,
+        target_amount: goalPayload.targetAmount,
+        current_amount: goalPayload.currentAmount || 0,
+        deadline: deadlineDate.toISOString().split("T")[0],
+        notes: goalPayload.notes || "",
       });
 
-      if (newlyCompleted.length) {
-        setCompletedGoals((prevCompleted) => [...prevCompleted, ...newlyCompleted]);
-      }
-
-      return remaining;
-    });
+      setActiveGoals((prev) => [...prev, response]);
+      setAvailableBalance(availableBalance - goalPayload.targetAmount);
+      toast({ title: "Goal created successfully!" });
+    } catch (error) {
+      toast({ title: "Error creating goal", description: error.message, variant: "destructive" });
+    }
   };
 
-  const handleEditGoal = (goalId, updatedData) => {
-    setActiveGoals((prev) =>
-      prev.map((goal) =>
-        goal.id === goalId
-          ? {
-              ...goal,
-              name: updatedData.name,
-              targetAmount: updatedData.targetAmount,
-              deadline: updatedData.deadline,
-            }
-          : goal
-      )
-    );
-    toast({ title: "Goal updated", description: "Changes saved successfully." });
+  const handleAddSavings = async (goalId, payload) => {
+    try {
+      await api.addSavingsToGoal(goalId, {
+        amount: payload.amount,
+        date: payload.date,
+        notes: payload.notes || "",
+      });
+
+      const data = await api.getGoals();
+      const allGoals = data.goals || [];
+      const now = new Date();
+      const active = allGoals.filter(g => new Date(g.deadline) > now && g.current_amount < g.target_amount);
+      const completed = allGoals.filter(g => g.current_amount >= g.target_amount);
+      
+      setActiveGoals(active);
+      setCompletedGoals(completed);
+      setAvailableBalance(data.available_balance || 0);
+      toast({ title: "Funds added successfully!" });
+    } catch (error) {
+      toast({ title: "Error adding funds", description: error.message, variant: "destructive" });
+    }
   };
 
-  const handleDeleteGoal = (goalId) => {
-    setActiveGoals((prev) => prev.filter((goal) => goal.id !== goalId));
-    toast({ title: "Goal deleted", description: "Goal removed from your list." });
+  const handleEditGoal = async (goalId, updatedData) => {
+    try {
+      await api.updateGoal(goalId, {
+        name: updatedData.name,
+        target_amount: updatedData.targetAmount,
+        deadline: updatedData.deadline,
+      });
+      
+      const data = await api.getGoals();
+      const allGoals = data.goals || [];
+      const now = new Date();
+      const active = allGoals.filter(g => new Date(g.deadline) > now && g.current_amount < g.target_amount);
+      const completed = allGoals.filter(g => g.current_amount >= g.target_amount);
+      
+      setActiveGoals(active);
+      setCompletedGoals(completed);
+      toast({ title: "Goal updated", description: "Changes saved successfully." });
+    } catch (error) {
+      toast({ title: "Error updating goal", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteGoal = async (goalId) => {
+    try {
+      await api.deleteGoal(goalId);
+      
+      // Refresh goals to update available balance
+      const data = await api.getGoals();
+      const allGoals = data.goals || [];
+      const now = new Date();
+      const active = allGoals.filter(g => new Date(g.deadline) > now && g.current_amount < g.target_amount);
+      const completed = allGoals.filter(g => g.current_amount >= g.target_amount);
+      
+      setActiveGoals(active);
+      setCompletedGoals(completed);
+      setAvailableBalance(data.available_balance || 0);
+      
+      toast({ title: "Goal deleted", description: "Goal removed and balance freed up!" });
+    } catch (error) {
+      toast({ title: "Error deleting goal", description: error.message, variant: "destructive" });
+    }
   };
 
   const isOverdue = (deadline) => {
@@ -215,13 +258,13 @@ export default function Goals() {
               {activeGoals.map((goal) => {
                 const monthsRemaining = getMonthsRemaining(goal.deadline) ?? 0;
                 const meta = CATEGORY_META[goal.category] || CATEGORY_META.other;
-                const icon = goal.icon || meta.icon;
-                const color = goal.color || meta.color;
-                const overfunded = goal.targetAmount ? goal.saved > goal.targetAmount : false;
-                const progress = goal.targetAmount ? Math.min((goal.saved / goal.targetAmount) * 100, 100) : 0;
+                const icon = meta.icon;
+                const color = meta.color;
+                const overfunded = goal.target_amount ? goal.current_amount > goal.target_amount : false;
+                const progress = goal.target_amount ? Math.min((goal.current_amount / goal.target_amount) * 100, 100) : 0;
                 const status = paceStatus(goal, monthsRemaining);
-                const remaining = Math.max(goal.targetAmount - goal.saved, 0);
-                const monthlyNeeded = goal.targetAmount && goal.timeframeMonths ? Math.ceil(remaining / Math.max(monthsRemaining, 1)) : 0;
+                const remaining = Math.max(goal.target_amount - goal.current_amount, 0);
+                const monthlyNeeded = goal.target_amount ? Math.ceil(remaining / Math.max(monthsRemaining, 1)) : 0;
                 const overdue = isOverdue(goal.deadline) && remaining > 0;
 
                 return (
@@ -253,8 +296,8 @@ export default function Goals() {
 
                       <div className="flex items-end justify-between pt-2">
                         <div>
-                          <p className="text-3xl font-bold">₹{goal.saved.toLocaleString()}</p>
-                          <p className="text-xs text-muted-foreground mt-1">of ₹{goal.targetAmount.toLocaleString()}</p>
+                          <p className="text-3xl font-bold">₹{goal.current_amount.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground mt-1">of ₹{goal.target_amount.toLocaleString()}</p>
                         </div>
                         <div className="text-right">
                           <span className="text-sm font-semibold px-3 py-1.5 rounded-full inline-block" style={{ backgroundColor: `${color}15`, color }}>
@@ -266,7 +309,7 @@ export default function Goals() {
                       {overfunded && (
                         <div className="inline-flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
                           <Sparkles className="w-3.5 h-3.5" />
-                          Overfunded by ₹{(goal.saved - goal.targetAmount).toLocaleString()}
+                          Overfunded by ₹{(goal.current_amount - goal.target_amount).toLocaleString()}
                         </div>
                       )}
 
