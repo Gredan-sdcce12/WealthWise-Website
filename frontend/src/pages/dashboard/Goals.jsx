@@ -299,7 +299,13 @@ export default function Goals() {
                               <DialogHeader>
                                 <DialogTitle>Edit Goal</DialogTitle>
                               </DialogHeader>
-                              <EditGoalForm goal={goal} onSave={(data) => { handleEditGoal(goal.id, data); }} />
+                              <EditGoalForm 
+                                goal={goal} 
+                                onSave={(data) => { 
+                                  handleEditGoal(goal.id, data);
+                                  document.querySelector('[data-state="open"]')?.click();
+                                }} 
+                              />
                             </DialogContent>
                           </Dialog>
                           <Button
@@ -374,36 +380,63 @@ function EditGoalForm({ goal, onSave }) {
   const [name, setName] = useState(goal.name);
   const [targetAmount, setTargetAmount] = useState(goal.targetAmount);
   const [deadline, setDeadline] = useState(goal.deadline);
-  const [open, setOpen] = useState(false);
 
   const handleSubmit = () => {
-    if (!name.trim() || !targetAmount || !deadline) {
-      toast({ title: "Fill all fields", variant: "destructive" });
+    if (!name.trim()) {
+      toast({ title: "Enter a goal name", variant: "destructive" });
       return;
     }
-    onSave({ name, targetAmount: Number(targetAmount), deadline });
-    setOpen(false);
+    
+    const target = Number(targetAmount);
+    if (!target || target <= 0) {
+      toast({ title: "Enter a valid target amount", variant: "destructive" });
+      return;
+    }
+    
+    if (!deadline) {
+      toast({ title: "Select a deadline", variant: "destructive" });
+      return;
+    }
+    
+    onSave({ name: name.trim(), targetAmount: target, deadline });
   };
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Goal Name</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Emergency Fund" />
+        <Input 
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+          placeholder="e.g., Emergency Fund"
+          autoFocus
+        />
       </div>
       <div className="space-y-2">
         <Label>Target Amount (₹)</Label>
-        <Input type="number" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="10000" />
+        <Input 
+          type="number" 
+          value={targetAmount} 
+          onChange={(e) => setTargetAmount(e.target.value)} 
+          placeholder="10000"
+          min="1"
+          step="100"
+        />
       </div>
       <div className="space-y-2">
         <Label>Deadline</Label>
-        <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+        <Input 
+          type="date" 
+          value={deadline} 
+          onChange={(e) => setDeadline(e.target.value)}
+          min={new Date().toISOString().split('T')[0]}
+        />
       </div>
       <div className="flex gap-2 pt-4">
-        <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">
+        <Button type="button" variant="outline" className="flex-1">
           Cancel
         </Button>
-        <Button variant="hero" onClick={handleSubmit} className="flex-1">
+        <Button type="button" variant="hero" onClick={handleSubmit} className="flex-1">
           Save Changes
         </Button>
       </div>
