@@ -144,7 +144,7 @@ def _check_budget_warning(user_id: str, category: str, new_amount: float, txn_da
 			
 			current_spent = float(cur.fetchone()[0])
 			new_total = current_spent + new_amount
-			percentage = (new_total / budget_amount) * 100
+			percentage = (new_total / float(budget_amount)) * 100
 			
 			warning_data = {
 				"budget_id": budget_id,
@@ -179,7 +179,7 @@ def create_transaction(payload: TransactionCreate, user_id: str = Depends(get_cu
 	# Check budget warning for expenses
 	budget_warning = {}
 	if payload.txn_type == "expense" and payload.category:
-		budget_warning = _check_budget_warning(user_id, payload.category, payload.amount, txn_dt)
+		budget_warning = _check_budget_warning(payload.user_id, payload.category, payload.amount, txn_dt)
 
 	conn = get_db_connection()
 	try:
