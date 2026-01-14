@@ -3,7 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Target, Calendar, Wallet, Sparkles, CheckCircle2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Target, Calendar, Wallet, Sparkles, CheckCircle2, Trash2, Edit2, AlertCircle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
 import { AddFundsDialog } from "@/components/dialogs/AddFundsDialog";
 
@@ -17,9 +21,8 @@ const CATEGORY_META = {
 };
 
 const initialActiveGoals = [
-  { id: 1, name: "Emergency Fund", category: "emergency", targetAmount: 30000, saved: 12000, timeframeMonths: 6, deadline: "2025-06-01" },
-  { id: 2, name: "Travel Reserve", category: "travel", targetAmount: 15000, saved: 6000, timeframeMonths: 5, deadline: "2025-05-15" },
-  { id: 3, name: "Education Upskilling", category: "education", targetAmount: 20000, saved: 8000, timeframeMonths: 8, deadline: "2025-08-01" },
+  { id: 1, name: "Emergency Fund", category: "emergency", targetAmount: 10000, saved: 8000, timeframeMonths: 6, deadline: "2025-06-01" },
+  { id: 2, name: "Travel Reserve", category: "travel", targetAmount: 8000, saved: 5000, timeframeMonths: 5, deadline: "2025-05-15" },
 ];
 
 const initialCompletedGoals = [
@@ -116,6 +119,32 @@ export default function Goals() {
     });
   };
 
+  const handleEditGoal = (goalId, updatedData) => {
+    setActiveGoals((prev) =>
+      prev.map((goal) =>
+        goal.id === goalId
+          ? {
+              ...goal,
+              name: updatedData.name,
+              targetAmount: updatedData.targetAmount,
+              deadline: updatedData.deadline,
+            }
+          : goal
+      )
+    );
+    toast({ title: "Goal updated", description: "Changes saved successfully." });
+  };
+
+  const handleDeleteGoal = (goalId) => {
+    setActiveGoals((prev) => prev.filter((goal) => goal.id !== goalId));
+    toast({ title: "Goal deleted", description: "Goal removed from your list." });
+  };
+
+  const isOverdue = (deadline) => {
+    const end = new Date(deadline).getTime();
+    return Date.now() > end;
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -192,6 +221,8 @@ export default function Goals() {
                 const progress = goal.targetAmount ? Math.min((goal.saved / goal.targetAmount) * 100, 100) : 0;
                 const status = paceStatus(goal, monthsRemaining);
                 const remaining = Math.max(goal.targetAmount - goal.saved, 0);
+                const monthlyNeeded = goal.targetAmount && goal.timeframeMonths ? Math.ceil(remaining / Math.max(monthsRemaining, 1)) : 0;
+                const overdue = isOverdue(goal.deadline) && remaining > 0;
 
                 return (
                   <Card key={goal.id} variant="ghost" className="border-muted/60">
@@ -206,7 +237,10 @@ export default function Goals() {
                             <p className="text-sm text-muted-foreground">Time left: {monthsRemaining} months • Deadline: {goal.deadline}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`${statusToneClass[status.tone] || ""} capitalize`}>{status.label}</Badge>
+                        <div className="flex gap-2">
+                          {overdue && <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Overdue</Badge>}
+                          <Badge variant="outline" className={`${statusToneClass[status.tone] || ""} capitalize`}>{status.label}</Badge>
+                        </div>
                       </div>
 
                       <div className="flex items-end justify-between">
@@ -224,16 +258,47 @@ export default function Goals() {
                         </div>
                       )}
 
+                      {!overfunded && monthlyNeeded > 0 && (
+                        <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
+                          Save <span className="font-semibold">₹{monthlyNeeded.toLocaleString()}/month</span> to stay on track
+                        </div>
+                      )}
+
                       <Progress value={progress} className="h-2" />
 
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center justify-between text-sm gap-2">
                         <span className="text-muted-foreground">₹{remaining.toLocaleString()} remaining</span>
-                        <AddFundsDialog
-                          goalName={goal.name}
-                          availableBalance={derivedAvailableBalance}
-                          onAdd={(payload) => handleAddSavings(goal.id, payload)}
-                          trigger={<Button variant="outline" size="sm">+ Add Savings</Button>}
-                        />
+                        <div className="flex gap-2">
+                          <AddFundsDialog
+                            goalName={goal.name}
+                            availableBalance={derivedAvailableBalance}
+                            onAdd={(payload) => handleAddSavings(goal.id, payload)}
+                            trigger={<Button variant="outline" size="sm">+ Add</Button>}
+                          />
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-blue-600"><Edit2 className="w-3 h-3" /></Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[400px]">
+                              <DialogHeader>
+                                <DialogTitle>Edit Goal</DialogTitle>
+                              </DialogHeader>
+                              <EditGoalForm goal={goal} onSave={(data) => { handleEditGoal(goal.id, data); }} />
+                            </DialogContent>
+                          </Dialog>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => {
+                              if (window.confirm(`Delete "${goal.name}"? This can't be undone.`)) {
+                                handleDeleteGoal(goal.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -279,6 +344,47 @@ export default function Goals() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function EditGoalForm({ goal, onSave }) {
+  const [name, setName] = useState(goal.name);
+  const [targetAmount, setTargetAmount] = useState(goal.targetAmount);
+  const [deadline, setDeadline] = useState(goal.deadline);
+  const [open, setOpen] = useState(false);
+
+  const handleSubmit = () => {
+    if (!name.trim() || !targetAmount || !deadline) {
+      toast({ title: "Fill all fields", variant: "destructive" });
+      return;
+    }
+    onSave({ name, targetAmount: Number(targetAmount), deadline });
+    setOpen(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label>Goal Name</Label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Emergency Fund" />
+      </div>
+      <div className="space-y-2">
+        <Label>Target Amount (₹)</Label>
+        <Input type="number" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="10000" />
+      </div>
+      <div className="space-y-2">
+        <Label>Deadline</Label>
+        <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+      </div>
+      <div className="flex gap-2 pt-4">
+        <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">
+          Cancel
+        </Button>
+        <Button variant="hero" onClick={handleSubmit} className="flex-1">
+          Save Changes
+        </Button>
+      </div>
     </div>
   );
 }
