@@ -10,11 +10,11 @@ import { toast } from "@/hooks/use-toast";
 export function AddGoalDialog({ trigger, availableBalance = 0, onCreate }) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: "Emergency Fund",
-    targetAmount: "30000",
-    currentAmount: "0",
-    timePeriodMonths: "6",
-    category: "emergency",
+    name: "",
+    targetAmount: "",
+    currentAmount: "",
+    timePeriodMonths: "",
+    category: "",
     priority: "medium"
   });
 
@@ -73,11 +73,11 @@ export function AddGoalDialog({ trigger, availableBalance = 0, onCreate }) {
     toast({ title: "Goal Created", description: `"${goalPayload.name}" set for ₹${target.toLocaleString()}` });
     setOpen(false);
     setFormData({
-      name: "Emergency Fund",
-      targetAmount: "30000",
-      currentAmount: "0",
-      timePeriodMonths: "6",
-      category: "emergency",
+      name: "",
+      targetAmount: "",
+      currentAmount: "",
+      timePeriodMonths: "",
+      category: "",
       priority: "medium",
     });
   };

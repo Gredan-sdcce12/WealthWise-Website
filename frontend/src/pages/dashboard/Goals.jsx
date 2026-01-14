@@ -164,7 +164,7 @@ export default function Goals() {
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total Income</p>
-              <p className="text-2xl font-bold">₹{incomeTotal.toLocaleString()}</p>
+              <p className="text-2xl font-bold mt-1">₹{incomeTotal.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
               <Wallet className="w-6 h-6 text-emerald-700" />
@@ -175,7 +175,7 @@ export default function Goals() {
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total Expenses</p>
-              <p className="text-2xl font-bold">₹{expenseTotal.toLocaleString()}</p>
+              <p className="text-2xl font-bold mt-1">₹{expenseTotal.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
               <Calendar className="w-6 h-6 text-destructive" />
@@ -186,8 +186,8 @@ export default function Goals() {
           <CardContent className="p-6 flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Available for Goals</p>
-              <p className="text-2xl font-bold">₹{derivedAvailableBalance.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground mt-1">Keeps goal creation within your limit</p>
+              <p className="text-2xl font-bold mt-1">₹{derivedAvailableBalance.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Keeps goal creation within your limit</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
               <Target className="w-6 h-6 text-primary" />
@@ -197,21 +197,21 @@ export default function Goals() {
       </div>
 
       <Card variant="elevated">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
           <div>
             <CardTitle>Active Goals</CardTitle>
-            <p className="text-sm text-muted-foreground">Add savings, watch progress, and spot risk early.</p>
+            <p className="text-sm text-muted-foreground mt-1.5">Add savings, watch progress, and spot risk early.</p>
             <p className="text-xs text-muted-foreground mt-1">₹{totals.saved.toLocaleString()} saved of ₹{totals.target.toLocaleString()} planned</p>
           </div>
           <Badge variant="outline">{activeGoals.length} active</Badge>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {activeGoals.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="border rounded-lg p-8 text-center text-sm text-muted-foreground">
               No active goals yet. Start by creating one to make progress visible.
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
               {activeGoals.map((goal) => {
                 const monthsRemaining = getMonthsRemaining(goal.deadline) ?? 0;
                 const meta = CATEGORY_META[goal.category] || CATEGORY_META.other;
@@ -225,59 +225,75 @@ export default function Goals() {
                 const overdue = isOverdue(goal.deadline) && remaining > 0;
 
                 return (
-                  <Card key={goal.id} variant="ghost" className="border-muted/60">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${color}15` }}>
+                  <Card key={goal.id} variant="ghost" className="border-muted/60 hover:border-muted transition-all">
+                    <CardContent className="p-6 space-y-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ backgroundColor: `${color}15` }}>
                             {icon}
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-lg">{goal.name}</h3>
-                            <p className="text-sm text-muted-foreground">Time left: {monthsRemaining} months • Deadline: {goal.deadline}</p>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-lg truncate">{goal.name}</h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {monthsRemaining} months left • {goal.deadline}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          {overdue && <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Overdue</Badge>}
-                          <Badge variant="outline" className={`${statusToneClass[status.tone] || ""} capitalize`}>{status.label}</Badge>
+                        <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                          {overdue && (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs px-2 py-0.5">
+                              <AlertCircle className="w-3 h-3 mr-1" /> Overdue
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className={`${statusToneClass[status.tone] || ""} capitalize text-xs px-2 py-0.5`}>
+                            {status.label}
+                          </Badge>
                         </div>
                       </div>
 
-                      <div className="flex items-end justify-between">
+                      <div className="flex items-end justify-between pt-2">
                         <div>
                           <p className="text-3xl font-bold">₹{goal.saved.toLocaleString()}</p>
-                          <p className="text-sm text-muted-foreground">of ₹{goal.targetAmount.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground mt-1">of ₹{goal.targetAmount.toLocaleString()}</p>
                         </div>
-                        <span className="text-sm font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: `${color}15`, color }}>{progress.toFixed(0)}%</span>
+                        <div className="text-right">
+                          <span className="text-sm font-semibold px-3 py-1.5 rounded-full inline-block" style={{ backgroundColor: `${color}15`, color }}>
+                            {progress.toFixed(0)}%
+                          </span>
+                        </div>
                       </div>
 
                       {overfunded && (
-                        <div className="inline-flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full">
-                          <Sparkles className="w-3 h-3" />
+                        <div className="inline-flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                          <Sparkles className="w-3.5 h-3.5" />
                           Overfunded by ₹{(goal.saved - goal.targetAmount).toLocaleString()}
                         </div>
                       )}
 
                       {!overfunded && monthlyNeeded > 0 && (
-                        <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-lg">
-                          Save <span className="font-semibold">₹{monthlyNeeded.toLocaleString()}/month</span> to stay on track
+                        <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-2.5 rounded-lg border border-muted">
+                          💡 Save <span className="font-semibold text-foreground">₹{monthlyNeeded.toLocaleString()}/month</span> to stay on track
                         </div>
                       )}
 
-                      <Progress value={progress} className="h-2" />
+                      <Progress value={progress} className="h-2.5" />
 
-                      <div className="flex items-center justify-between text-sm gap-2">
-                        <span className="text-muted-foreground">₹{remaining.toLocaleString()} remaining</span>
-                        <div className="flex gap-2">
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <span className="text-xs text-muted-foreground">
+                          ₹{remaining.toLocaleString()} remaining
+                        </span>
+                        <div className="flex gap-1.5">
                           <AddFundsDialog
                             goalName={goal.name}
                             availableBalance={derivedAvailableBalance}
                             onAdd={(payload) => handleAddSavings(goal.id, payload)}
-                            trigger={<Button variant="outline" size="sm">+ Add</Button>}
+                            trigger={<Button variant="outline" size="sm" className="h-8 px-3 text-xs">+ Add</Button>}
                           />
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-blue-600"><Edit2 className="w-3 h-3" /></Button>
+                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Button>
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-[400px]">
                               <DialogHeader>
@@ -289,14 +305,14 @@ export default function Goals() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-destructive"
+                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               if (window.confirm(`Delete "${goal.name}"? This can't be undone.`)) {
                                 handleDeleteGoal(goal.id);
                               }
                             }}
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </div>
@@ -310,33 +326,39 @@ export default function Goals() {
       </Card>
 
       <Card variant="elevated">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
           <div>
             <CardTitle>Completed Goals</CardTitle>
-            <p className="text-sm text-muted-foreground">Celebrate wins and keep them visible in reviews.</p>
+            <p className="text-sm text-muted-foreground mt-1.5">Celebrate wins and keep them visible in reviews.</p>
           </div>
           <Badge variant="outline">{completedGoals.length} completed</Badge>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {completedGoals.length === 0 ? (
-            <div className="border rounded-lg p-6 text-center text-sm text-muted-foreground">
+            <div className="border rounded-lg p-8 text-center text-sm text-muted-foreground">
               Completed goals will appear here with a 🎉 badge.
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {completedGoals.map((goal) => (
-                <Card key={goal.id} variant="ghost" className="border-emerald-200 bg-emerald-50/40">
-                  <CardContent className="p-5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl bg-white">
+                <Card key={goal.id} variant="ghost" className="border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50/60 transition-all">
+                  <CardContent className="p-5 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-white shadow-sm flex-shrink-0">
                         <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                       </div>
-                      <div>
-                        <p className="font-semibold flex items-center gap-2">{goal.name} <span>🎉</span></p>
-                        <p className="text-sm text-muted-foreground">₹{goal.saved.toLocaleString()} saved • {goal.completedOn || "Completed"}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm flex items-center gap-2 truncate">
+                          {goal.name} <span className="text-base">🎉</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          ₹{goal.saved.toLocaleString()} saved • {goal.completedOn || "Completed"}
+                        </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200">Done</Badge>
+                    <Badge variant="outline" className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs px-2 py-0.5 flex-shrink-0">
+                      Done
+                    </Badge>
                   </CardContent>
                 </Card>
               ))}
