@@ -179,7 +179,8 @@ def create_transaction(payload: TransactionCreate, user_id: str = Depends(get_cu
 	# Check budget warning for expenses
 	budget_warning = {}
 	if payload.txn_type == "expense" and payload.category:
-		budget_warning = _check_budget_warning(payload.user_id, payload.category, payload.amount, txn_dt)
+		# Use the authenticated user_id from the dependency, not the payload
+		budget_warning = _check_budget_warning(user_id, payload.category, payload.amount, txn_dt)
 
 	conn = get_db_connection()
 	try:
