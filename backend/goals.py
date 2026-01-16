@@ -54,7 +54,6 @@ class GoalUpdate(BaseModel):
 
 class AddSavingsRequest(BaseModel):
 	amount: float
-	date: date = None
 	notes: Optional[str] = None
 
 	@field_validator("amount")
@@ -63,11 +62,6 @@ class AddSavingsRequest(BaseModel):
 		if value <= 0:
 			raise ValueError("Savings amount must be positive")
 		return value
-
-	def __init__(self, **data):
-		if "date" not in data or data["date"] is None:
-			data["date"] = date.today()
-		super().__init__(**data)
 
 
 class GoalResponse(BaseModel):
