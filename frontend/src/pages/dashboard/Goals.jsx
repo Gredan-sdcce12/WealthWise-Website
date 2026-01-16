@@ -401,7 +401,7 @@ export default function Goals() {
                           {goal.name} <span className="text-base">🎉</span>
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          ₹{goal.saved.toLocaleString()} saved • {goal.completedOn || "Completed"}
+                          ₹{goal.current_amount.toLocaleString()} saved • {goal.completedOn || "Completed"}
                         </p>
                       </div>
                     </div>
