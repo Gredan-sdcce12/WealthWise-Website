@@ -82,11 +82,59 @@ class GoalResponse(BaseModel):
 
 # Helper functions
 def _get_available_balance(user_id: str) -> float:
-	"""Calculate available balance: for now return a safe default."""
-	# TODO: Once income/transactions schema is confirmed, implement real calculation
-	# For now, return 100000 as default available balance for testing
-	# The frontend will show this and allow goal creation
-	return 100000.0
+	"""Calculate available balance: Income - Expenses - Goals"""
+	conn = get_db_connection()
+	try:
+		with conn.cursor() as cur:
+			total_income = 0
+			total_expenses = 0
+			total_goals = 0
+			
+			# Get total income for current month
+			cur.execute(
+				"""
+				SELECT COALESCE(SUM(amount), 0)
+				FROM incomes
+				WHERE user_id = %s 
+				AND month = EXTRACT(MONTH FROM CURRENT_DATE)::INTEGER
+				AND year = EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER;
+				""",
+				(user_id,),
+			)
+			income_result = cur.fetchone()
+			total_income = float(income_result[0]) if income_result and income_result[0] else 0
+			
+			# Get total expenses for current month
+			cur.execute(
+				"""
+				SELECT COALESCE(SUM(amount), 0)
+				FROM transactions
+				WHERE user_id = %s AND txn_type = 'expense'
+				AND EXTRACT(YEAR FROM txn_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+				AND EXTRACT(MONTH FROM txn_date) = EXTRACT(MONTH FROM CURRENT_DATE);
+				""",
+				(user_id,),
+			)
+			expense_result = cur.fetchone()
+			total_expenses = float(expense_result[0]) if expense_result and expense_result[0] else 0
+			
+			# Get total goal amounts for ACTIVE goals only (current_amount < target_amount)
+			cur.execute(
+				"""
+				SELECT COALESCE(SUM(target_amount), 0)
+				FROM goals
+				WHERE user_id = %s AND current_amount < target_amount;
+				""",
+				(user_id,),
+			)
+			goals_result = cur.fetchone()
+			total_goals = float(goals_result[0]) if goals_result and goals_result[0] else 0
+			
+			# Calculate: Income - Expenses - Goals
+			available = total_income - total_expenses - total_goals
+			return max(0, available)  # Return at least 0
+	finally:
+		conn.close()
 
 
 # Endpoints

@@ -165,9 +165,10 @@ export default function DashboardHome() {
     };
   }, [sharedLoadingMonthlyIncome, sharedMonthlyIncomeTotal]);
 
-  // Fetch monthly expenses and goals total
+  // Fetch monthly expenses and goals total with polling
   useEffect(() => {
     let active = true;
+    let pollInterval;
 
     const fetchExpensesAndGoals = async () => {
       try {
@@ -195,7 +196,8 @@ export default function DashboardHome() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (goalsRes.ok) {
-          const goalsData = await goalsRes.json();
+          const goalsResponse = await goalsRes.json();
+          const goalsData = goalsResponse.goals || [];
           const totalGoals = goalsData.reduce((sum, goal) => sum + (goal.target_amount || 0), 0);
           setGoalsTotalAmount(totalGoals);
         }
@@ -205,8 +207,13 @@ export default function DashboardHome() {
     };
 
     fetchExpensesAndGoals();
+    
+    // Polling: refetch every 2 seconds to catch updates from other pages
+    pollInterval = setInterval(fetchExpensesAndGoals, 2000);
+    
     return () => {
       active = false;
+      if (pollInterval) clearInterval(pollInterval);
     };
   }, []);
 

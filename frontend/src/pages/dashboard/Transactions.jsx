@@ -81,6 +81,15 @@ export default function Transactions() {
       fetchSummary();
       fetchIncomeTotal();
       fetchBudgets();
+      
+      // Polling: refetch summary, income, and budgets every 2 seconds to catch updates
+      const pollInterval = setInterval(() => {
+        fetchSummary();
+        fetchIncomeTotal();
+        fetchBudgets();
+      }, 2000);
+      
+      return () => clearInterval(pollInterval);
     }
   }, [userId, selectedMonth, filterCategory, filterPaymentMode, searchQuery]);
 
