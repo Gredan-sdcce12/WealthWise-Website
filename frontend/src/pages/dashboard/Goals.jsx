@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -41,6 +42,9 @@ const getMonthsRemaining = (deadline) => {
 };
 
 export default function Goals() {
+  const outletCtx = useOutletContext?.() || {};
+  const { triggerRefresh } = outletCtx;
+
   const [incomeTotal] = useState(50000);
   const [expenseTotal] = useState(32000);
   const [activeGoals, setActiveGoals] = useState([]);
@@ -135,6 +139,9 @@ export default function Goals() {
       setCompletedGoals(completed);
       setAvailableBalance(data.available_balance || 0);
       toast({ title: "Funds added successfully!" });
+      
+      // Trigger dashboard refresh
+      triggerRefresh?.();
     } catch (error) {
       toast({ title: "Error adding funds", description: error.message, variant: "destructive" });
     }

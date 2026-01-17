@@ -15,6 +15,7 @@ export function DashboardLayout() {
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
   const [isLoadingIncomeTotal, setIsLoadingIncomeTotal] = useState(true);
   const [isSavingIncome, setIsSavingIncome] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const fetchMonthlyIncomeTotal = useCallback(
     async (uid, month, year) => {
@@ -140,6 +141,10 @@ export function DashboardLayout() {
     }
   }, [fetchMonthlyIncomeTotal, userId]);
 
+  const triggerRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardSidebar
@@ -162,6 +167,8 @@ export function DashboardLayout() {
               monthlyIncomeTotal,
               isLoadingIncomeTotal,
               isSavingIncome,
+              triggerRefresh,
+              refreshKey,
             }}
           />
         </main>

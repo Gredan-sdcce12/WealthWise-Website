@@ -79,6 +79,7 @@ export default function DashboardHome() {
     isSavingIncome: sharedSaving,
     monthlyIncomeTotal: sharedMonthlyIncomeTotal,
     isLoadingIncomeTotal: sharedLoadingMonthlyIncome,
+    refreshKey,
   } = outletCtx;
 
   const [latestIncome, setLatestIncome] = useState(null);
@@ -214,7 +215,7 @@ export default function DashboardHome() {
       active = false;
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, []);
+  }, [refreshKey]);
 
   const incomeAmount = sharedMonthlyIncomeTotal ?? monthlyIncomeTotal ?? 0;
   const incomeType = latestIncome?.income_type ?? "monthly";
