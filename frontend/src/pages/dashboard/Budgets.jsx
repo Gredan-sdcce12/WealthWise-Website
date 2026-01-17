@@ -193,6 +193,18 @@ export default function Budgets() {
   });
   const budgetsExceeded = budgets.filter((b) => b.spent > b.amount);
 
+  // Calculate days remaining in current month
+  const getDaysRemaining = () => {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const daysRemaining = daysInMonth - now.getDate();
+    const percentagePassed = ((now.getDate() / daysInMonth) * 100).toFixed(0);
+    return { daysRemaining, percentagePassed };
+  };
+
+  const { daysRemaining, percentagePassed } = getDaysRemaining();
+
   // Handle form input changes
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -472,8 +484,8 @@ export default function Budgets() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Period Remaining</p>
-                <p className="text-2xl font-bold mt-1">15 days</p>
-                <p className="text-xs text-muted-foreground mt-1">50% of month passed</p>
+                <p className="text-2xl font-bold mt-1">{daysRemaining} days</p>
+                <p className="text-xs text-muted-foreground mt-1">{percentagePassed}% of month passed</p>
               </div>
             </div>
           </CardContent>

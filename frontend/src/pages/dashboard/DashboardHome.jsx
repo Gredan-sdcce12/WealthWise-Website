@@ -288,9 +288,9 @@ export default function DashboardHome() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Monthly Expenses</p>
-                <p className="text-2xl font-bold mt-1">₹2,847</p>
+                <p className="text-2xl font-bold mt-1">₹{monthlyExpenses.toLocaleString()}</p>
               </div>
-              <p className="text-xs text-destructive">-3.1% vs last month</p>
+              <p className="text-xs text-muted-foreground">From logged transactions</p>
             </div>
           </CardContent>
         </Card>
@@ -304,9 +304,9 @@ export default function DashboardHome() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Savings Rate</p>
-                <p className="text-2xl font-bold mt-1">18.5%</p>
+                <p className="text-2xl font-bold mt-1">{incomeAmount > 0 ? (((incomeAmount - monthlyExpenses) / incomeAmount) * 100).toFixed(1) : 0}%</p>
               </div>
-              <Progress value={18.5} className="h-1.5 mt-2" />
+              <Progress value={Math.max(0, incomeAmount > 0 ? ((incomeAmount - monthlyExpenses) / incomeAmount) * 100 : 0)} className="h-1.5 mt-2" />
             </div>
           </CardContent>
         </Card>

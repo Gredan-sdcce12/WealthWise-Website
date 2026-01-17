@@ -244,9 +244,9 @@ export default function Goals() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Overall Progress</p>
-                <p className="text-2xl font-bold mt-1">{((totals.saved / totals.target) * 100).toFixed(1)}%</p>
+                <p className="text-2xl font-bold mt-1">{totals.target > 0 ? ((totals.saved / totals.target) * 100).toFixed(1) : 0}%</p>
               </div>
-              <Progress value={Math.min((totals.saved / totals.target) * 100, 100)} className="h-1.5" />
+              <Progress value={totals.target > 0 ? Math.min((totals.saved / totals.target) * 100, 100) : 0} className="h-1.5" />
             </div>
           </CardContent>
         </Card>

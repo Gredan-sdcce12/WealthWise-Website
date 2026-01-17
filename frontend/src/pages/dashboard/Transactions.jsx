@@ -35,6 +35,8 @@ export default function Transactions() {
     total_income: 0,
     expenses_by_category: {},
   });
+  const [incomeTotal, setIncomeTotal] = useState(0);
+  const [budgets, setBudgets] = useState([]);
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -76,8 +78,39 @@ export default function Transactions() {
       fetchCategories();
       fetchTransactions();
       fetchSummary();
+      fetchIncomeTotal();
+      fetchBudgets();
     }
   }, [userId, selectedMonth, filterCategory, filterPaymentMode, searchQuery]);
+
+  const fetchIncomeTotal = async () => {
+    try {
+      const [year, month] = selectedMonth.split('-');
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) return;
+
+      const res = await fetch(`http://127.0.0.1:8000/income/total?month=${month}&year=${year}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const body = await res.json();
+        setIncomeTotal(typeof body.total === "number" ? body.total : 0);
+      }
+    } catch (err) {
+      console.warn("Unable to load income total", err);
+    }
+  };
+
+  const fetchBudgets = async () => {
+    try {
+      const [year, month] = selectedMonth.split('-');
+      const data = await api.getBudgets({ month: parseInt(month), year: parseInt(year) });
+      setBudgets(data || []);
+    } catch (err) {
+      console.warn("Unable to load budgets", err);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -160,6 +193,42 @@ export default function Transactions() {
   const overspentCategories = Object.values(expensesByCategory).filter(
     (amount) => amount > 5000
   ).length;
+
+  // Calculate Net Flow
+  const netFlow = (incomeTotal || 0) - (totalExpenses || 0);
+
+  // Calculate Top Category
+  const getTopCategory = () => {
+    if (!expensesByCategory || Object.keys(expensesByCategory).length === 0) {
+      return { name: "No data", amount: 0, percentage: 0, icon: "📊" };
+    }
+    const topCat = Object.entries(expensesByCategory).reduce((max, [cat, amount]) => 
+      amount > max.amount ? { category: cat, amount } : max, 
+      { category: "", amount: 0 }
+    );
+    const categoryData = categories.find(c => c.value === topCat.category);
+    const percentage = totalExpenses > 0 ? ((topCat.amount / totalExpenses) * 100).toFixed(0) : 0;
+    return {
+      name: categoryData?.label || topCat.category,
+      amount: topCat.amount,
+      percentage,
+      icon: categoryData?.icon || "💰"
+    };
+  };
+
+  // Calculate Over Budget Categories
+  const getOverBudgetCount = () => {
+    const totalBudget = budgets.reduce((acc, b) => acc + b.amount, 0);
+    const totalSpent = budgets.reduce((acc, b) => acc + b.spent, 0);
+    const overBudgetCategories = budgets.filter((b) => b.spent > b.amount);
+    return {
+      count: overBudgetCategories.length,
+      categories: overBudgetCategories.map(b => categories.find(c => c.value === b.category)?.label || b.category).join(", ")
+    };
+  };
+
+  const topCategory = getTopCategory();
+  const overBudget = getOverBudgetCount();
 
   // Filter transactions (client-side for already fetched data)
   const filteredTransactions = currentMonthExpenses;
@@ -430,7 +499,7 @@ export default function Transactions() {
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground font-medium">Net Flow</p>
               <div className="space-y-2">
-                <p className="text-2xl font-bold text-emerald-600">₹5,352</p>
+                <p className={`text-2xl font-bold ${netFlow >= 0 ? "text-emerald-600" : "text-red-600"}`}>₹{Math.abs(netFlow).toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">Income - Expenses (balance for month)</p>
               </div>
             </div>
@@ -443,10 +512,10 @@ export default function Transactions() {
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground font-medium">Top Category</p>
               <div className="flex items-center gap-3 mt-2">
-                <span className="text-2xl">🏠</span>
+                <span className="text-2xl">{topCategory.icon}</span>
                 <div>
-                  <p className="font-semibold">Housing</p>
-                  <p className="text-xs text-red-600">₹1,200 (42% of total)</p>
+                  <p className="font-semibold">{topCategory.name}</p>
+                  <p className="text-xs text-red-600">₹{topCategory.amount.toLocaleString()} ({topCategory.percentage}% of total)</p>
                 </div>
               </div>
             </div>
@@ -459,8 +528,8 @@ export default function Transactions() {
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground font-medium">Over Budget Alert</p>
               <div className="space-y-2">
-                <p className="text-2xl font-bold text-amber-600">2 Categories</p>
-                <p className="text-xs text-amber-700">Shopping, Entertainment</p>
+                <p className="text-2xl font-bold text-amber-600">{overBudget.count} {overBudget.count === 1 ? "Category" : "Categories"}</p>
+                <p className="text-xs text-amber-700">{overBudget.categories || "All on track"}</p>
               </div>
             </div>
           </CardContent>
