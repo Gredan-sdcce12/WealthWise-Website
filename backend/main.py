@@ -22,9 +22,11 @@ app.add_middleware(
 		"http://127.0.0.1:3000",
 		"http://localhost:8080",  # Other frameworks
 		"http://127.0.0.1:8080",
+		"http://localhost:5174",  # Vite alt port
+		"http://127.0.0.1:5174",
 	],
 	allow_credentials=True,
-	allow_methods=["*"],
+	allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
 	allow_headers=["*"],
 )
 
@@ -38,6 +40,12 @@ app.include_router(goals_router)
 @app.get("/")
 def read_root():
 	"""Lightweight root endpoint to verify server is running."""
+	return {"status": "ok"}
+
+
+@app.options("/{path:path}")
+def handle_options(path: str):
+	"""Handle CORS preflight requests."""
 	return {"status": "ok"}
 
 

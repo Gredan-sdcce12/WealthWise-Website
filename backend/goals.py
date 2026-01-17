@@ -118,20 +118,21 @@ def _get_available_balance(user_id: str) -> float:
 			expense_result = cur.fetchone()
 			total_expenses = float(expense_result[0]) if expense_result and expense_result[0] else 0
 			
-			# Get total goal amounts for ACTIVE goals only (current_amount < target_amount)
+			# Get remaining amount to save for ACTIVE goals only
+			# For each active goal, calculate how much is left to save (target - current)
 			cur.execute(
 				"""
-				SELECT COALESCE(SUM(target_amount), 0)
+				SELECT COALESCE(SUM(target_amount - current_amount), 0)
 				FROM goals
 				WHERE user_id = %s AND current_amount < target_amount;
 				""",
 				(user_id,),
 			)
 			goals_result = cur.fetchone()
-			total_goals = float(goals_result[0]) if goals_result and goals_result[0] else 0
+			total_goals_remaining = float(goals_result[0]) if goals_result and goals_result[0] else 0
 			
-			# Calculate: Income - Expenses - Goals
-			available = total_income - total_expenses - total_goals
+			# Calculate: Income - Expenses - Remaining Goals to Save
+			available = total_income - total_expenses - total_goals_remaining
 			return max(0, available)  # Return at least 0
 	finally:
 		conn.close()

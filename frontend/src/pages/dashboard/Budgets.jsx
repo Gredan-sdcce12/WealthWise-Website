@@ -74,6 +74,9 @@ export default function Budgets() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
+      } else {
+        // Fallback for dev/testing
+        setUserId("test_user_123");
       }
     };
     getUserId();

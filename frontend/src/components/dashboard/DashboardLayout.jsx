@@ -28,8 +28,8 @@ export function DashboardLayout() {
       const url = `${API_BASE}/income/total${query ? `?${query}` : ""}`;
       try {
         const { data } = await supabase.auth.getSession();
-        const token = data?.session?.access_token;
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const token = data?.session?.access_token || "test_user_123"; // Fallback for dev
+        const headers = { Authorization: `Bearer ${token}` };
         const res = await fetch(url, { headers });
         if (!res.ok) throw new Error(`Income total fetch failed (${res.status})`);
         const body = await res.json();
@@ -50,12 +50,11 @@ export function DashboardLayout() {
       try {
         const { data } = await supabase.auth.getSession();
         if (!active) return;
-        const uid = data?.session?.user?.id;
-        if (!uid) return;
-        const token = data?.session?.access_token;
+        const uid = data?.session?.user?.id || "test_user_123"; // Fallback for dev
+        const token = data?.session?.access_token || "test_user_123"; // Fallback for dev
         setUserId(uid);
 
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const headers = { Authorization: `Bearer ${token}` };
         const res = await fetch(`${API_BASE}/income/latest`, { headers });
         if (!res.ok) {
           throw new Error(`Income check failed (${res.status})`);

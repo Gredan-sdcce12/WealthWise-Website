@@ -12,9 +12,14 @@ class ApiClient {
   async withAuthHeaders(headers = {}) {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token;
-    return token
-      ? { Authorization: `Bearer ${token}`, ...headers }
-      : headers;
+    
+    // For development: use a test token if no real token is available
+    const authToken = token || 'test_user_123';
+    
+    return {
+      Authorization: `Bearer ${authToken}`,
+      ...headers,
+    };
   }
 
   async request(endpoint, options = {}) {
@@ -27,6 +32,8 @@ class ApiClient {
       },
       ...options,
     };
+
+    console.log("[API] Request:", options.method || 'GET', url, "Headers:", config.headers);
 
     try {
       const response = await fetch(url, config);
@@ -66,7 +73,9 @@ class ApiClient {
     const params = new URLSearchParams({
       ...filters,
     });
-    return this.request(`/transactions?${params}`);
+    const url = `/transactions/?${params}`;
+    console.log("[API] Getting transactions with URL:", url, "Filters:", filters);
+    return this.request(url);
   }
 
   async getTransaction(txnId) {
