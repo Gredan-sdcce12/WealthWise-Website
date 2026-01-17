@@ -70,8 +70,8 @@ export default function Goals() {
     
     fetchGoals();
     
-    // Polling: refetch every 2 seconds to catch updates
-    const pollInterval = setInterval(fetchGoals, 2000);
+    // Polling: refetch every 5 seconds to catch updates (reduced frequency to prevent blinking)
+    const pollInterval = setInterval(fetchGoals, 5000);
     
     return () => {
       if (pollInterval) clearInterval(pollInterval);

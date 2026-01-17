@@ -85,12 +85,12 @@ export default function Transactions() {
       fetchIncomeTotal();
       fetchBudgets();
       
-      // Polling: refetch summary, income, and budgets every 2 seconds to catch updates
+      // Polling: refetch summary, income, and budgets every 5 seconds to catch updates (reduced frequency to prevent blinking)
       const pollInterval = setInterval(() => {
         fetchSummary();
         fetchIncomeTotal();
         fetchBudgets();
-      }, 2000);
+      }, 5000);
       
       return () => clearInterval(pollInterval);
     }

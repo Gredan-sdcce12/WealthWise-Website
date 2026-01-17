@@ -86,8 +86,13 @@ export default function Budgets() {
   useEffect(() => {
     if (!userId) return; // Wait for userId to be loaded
     
+    let isInitialLoad = true;
+    
     const fetchData = async () => {
-      setIsLoading(true);
+      // Only show loading spinner on initial load, not during polling
+      if (isInitialLoad) {
+        setIsLoading(true);
+      }
       setError(null);
       try {
         // Parse month/year from selectedMonth (e.g., "January 2026")
@@ -110,14 +115,17 @@ export default function Budgets() {
           variant: "destructive" 
         });
       } finally {
-        setIsLoading(false);
+        if (isInitialLoad) {
+          setIsLoading(false);
+          isInitialLoad = false;
+        }
       }
     };
     
     fetchData();
     
-    // Polling: refetch every 2 seconds to catch updates
-    const pollInterval = setInterval(fetchData, 2000);
+    // Polling: refetch every 5 seconds to catch updates (reduced frequency to prevent blinking)
+    const pollInterval = setInterval(fetchData, 5000);
     
     return () => {
       if (pollInterval) clearInterval(pollInterval);

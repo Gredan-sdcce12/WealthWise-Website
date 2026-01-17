@@ -210,8 +210,8 @@ export default function DashboardHome() {
 
     fetchExpensesAndGoals();
     
-    // Polling: refetch every 2 seconds to catch updates from other pages
-    pollInterval = setInterval(fetchExpensesAndGoals, 2000);
+    // Polling: refetch every 5 seconds to catch updates from other pages (reduced frequency to prevent blinking)
+    pollInterval = setInterval(fetchExpensesAndGoals, 5000);
     
     return () => {
       active = false;
