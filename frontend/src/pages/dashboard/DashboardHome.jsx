@@ -85,7 +85,7 @@ export default function DashboardHome() {
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
   const [isLoadingMonthlyTotal, setIsLoadingMonthlyTotal] = useState(true);
   const [monthlyExpenses, setMonthlyExpenses] = useState(2847);
-  const [goalsTotalAmount, setGoalsTotalAmount] = useState(0);
+  const [availableBalance, setAvailableBalance] = useState(0);
   const [showIncomePrompt, setShowIncomePrompt] = useState(false);
   const [allowUsePrevious, setAllowUsePrevious] = useState(false);
 
@@ -197,9 +197,8 @@ export default function DashboardHome() {
         });
         if (goalsRes.ok) {
           const goalsResponse = await goalsRes.json();
-          const goalsData = goalsResponse.goals || [];
-          const totalGoals = goalsData.reduce((sum, goal) => sum + (goal.target_amount || 0), 0);
-          setGoalsTotalAmount(totalGoals);
+          // Use available_balance from backend instead of calculating frontend
+          setAvailableBalance(goalsResponse.available_balance || 0);
         }
       } catch (err) {
         console.warn("Unable to load expenses or goals", err);
@@ -262,7 +261,7 @@ export default function DashboardHome() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Available Balance</p>
-                <p className="text-2xl font-bold mt-1">₹{Math.max(0, (incomeAmount || 0) - (monthlyExpenses || 2847) - (goalsTotalAmount || 0)).toLocaleString()}</p>
+                <p className="text-2xl font-bold mt-1">₹{Math.max(0, availableBalance).toLocaleString()}</p>
               </div>
               <p className="text-xs text-muted-foreground">After expenses & goals</p>
             </div>
