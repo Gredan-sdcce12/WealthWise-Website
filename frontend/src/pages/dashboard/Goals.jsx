@@ -192,7 +192,10 @@ export default function Goals() {
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Goals</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold">Goals</h1>
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Step 4: Allocate Goals</Badge>
+          </div>
           <p className="text-muted-foreground mt-1">Data-driven goals with a clear, review-ready summary.</p>
         </div>
         <AddGoalDialog

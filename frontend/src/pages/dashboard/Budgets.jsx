@@ -385,7 +385,10 @@ export default function Budgets() {
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Budget Planner</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold">Budget Planner</h1>
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Step 2: Set Budgets</Badge>
+          </div>
           <p className="text-muted-foreground">Set monthly limits and track your spending</p>
         </div>
         <div className="flex items-center gap-3">

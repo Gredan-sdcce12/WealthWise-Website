@@ -13,6 +13,7 @@ import {
   CreditCard,
   PiggyBank,
   Calendar,
+  BarChart3,
 } from "lucide-react";
 import {
   AreaChart,
