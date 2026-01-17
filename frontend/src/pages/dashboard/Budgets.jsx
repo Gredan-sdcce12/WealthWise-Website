@@ -110,7 +110,15 @@ export default function Budgets() {
         setIsLoading(false);
       }
     };
+    
     fetchData();
+    
+    // Polling: refetch every 2 seconds to catch updates
+    const pollInterval = setInterval(fetchData, 2000);
+    
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [selectedMonth, userId]);
 
   // TODO: Calculate spent from transactions when backend is ready

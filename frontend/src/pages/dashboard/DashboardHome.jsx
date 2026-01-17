@@ -168,6 +168,7 @@ export default function DashboardHome() {
 
   // Fetch monthly expenses and goals total with polling
   useEffect(() => {
+    console.log("[DashboardHome] refreshKey changed:", refreshKey);
     let active = true;
     let pollInterval;
 
@@ -199,7 +200,9 @@ export default function DashboardHome() {
         if (goalsRes.ok) {
           const goalsResponse = await goalsRes.json();
           // Use available_balance from backend instead of calculating frontend
-          setAvailableBalance(goalsResponse.available_balance || 0);
+          const newBalance = goalsResponse.available_balance || 0;
+          console.log("[DashboardHome] Updated available balance:", newBalance);
+          setAvailableBalance(newBalance);
         }
       } catch (err) {
         console.warn("Unable to load expenses or goals", err);

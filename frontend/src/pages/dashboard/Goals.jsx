@@ -67,7 +67,15 @@ export default function Goals() {
         toast({ title: "Error fetching goals", description: error.message, variant: "destructive" });
       }
     };
+    
     fetchGoals();
+    
+    // Polling: refetch every 2 seconds to catch updates
+    const pollInterval = setInterval(fetchGoals, 2000);
+    
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, []);
 
   const totals = useMemo(() => {
@@ -141,6 +149,7 @@ export default function Goals() {
       toast({ title: "Funds added successfully!" });
       
       // Trigger dashboard refresh
+      console.log("[Goals] Triggering refresh after adding funds");
       triggerRefresh?.();
     } catch (error) {
       toast({ title: "Error adding funds", description: error.message, variant: "destructive" });
