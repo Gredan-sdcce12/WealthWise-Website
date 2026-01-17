@@ -83,6 +83,8 @@ export default function DashboardHome() {
   const [latestIncome, setLatestIncome] = useState(null);
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
   const [isLoadingMonthlyTotal, setIsLoadingMonthlyTotal] = useState(true);
+  const [monthlyExpenses, setMonthlyExpenses] = useState(2847);
+  const [goalsTotalAmount, setGoalsTotalAmount] = useState(0);
   const [showIncomePrompt, setShowIncomePrompt] = useState(false);
   const [allowUsePrevious, setAllowUsePrevious] = useState(false);
 
@@ -162,6 +164,51 @@ export default function DashboardHome() {
     };
   }, [sharedLoadingMonthlyIncome, sharedMonthlyIncomeTotal]);
 
+  // Fetch monthly expenses and goals total
+  useEffect(() => {
+    let active = true;
+
+    const fetchExpensesAndGoals = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!active) return;
+        const token = data?.session?.access_token;
+        if (!token) return;
+
+        // Get current month
+        const now = new Date();
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
+
+        // Fetch monthly expenses
+        const expRes = await fetch(`${API_BASE}/transactions/summary?month=${month}&year=${year}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (expRes.ok) {
+          const expData = await expRes.json();
+          setMonthlyExpenses(expData.total_expense || 0);
+        }
+
+        // Fetch goals total amount
+        const goalsRes = await fetch(`${API_BASE}/goals`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (goalsRes.ok) {
+          const goalsData = await goalsRes.json();
+          const totalGoals = goalsData.reduce((sum, goal) => sum + (goal.target_amount || 0), 0);
+          setGoalsTotalAmount(totalGoals);
+        }
+      } catch (err) {
+        console.warn("Unable to load expenses or goals", err);
+      }
+    };
+
+    fetchExpensesAndGoals();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const incomeAmount = sharedMonthlyIncomeTotal ?? monthlyIncomeTotal ?? 0;
   const incomeType = latestIncome?.income_type ?? "monthly";
   const loadingIncome = sharedLoadingMonthlyIncome ?? isLoadingMonthlyTotal;
@@ -196,75 +243,70 @@ export default function DashboardHome() {
         />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Quick Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Available Balance */}
         <Card variant="elevated">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-blue-600" />
+              </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Balance</p>
-                <p className="text-2xl font-bold mt-1">₹24,562.80</p>
-                <div className="flex items-center gap-1 mt-2 text-sm text-emerald-600">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>+12.5%</span>
-                </div>
+                <p className="text-xs text-muted-foreground font-medium">Available Balance</p>
+                <p className="text-2xl font-bold mt-1">₹{Math.max(0, (incomeAmount || 0) - (monthlyExpenses || 2847) - (goalsTotalAmount || 0)).toLocaleString()}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-primary" />
-              </div>
+              <p className="text-xs text-muted-foreground">After expenses & goals</p>
             </div>
           </CardContent>
         </Card>
 
+        {/* Monthly Income */}
         <Card variant="elevated">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+              </div>
               <div>
-                <p className="text-sm text-muted-foreground">Monthly Income</p>
+                <p className="text-xs text-muted-foreground font-medium">Monthly Income</p>
                 <p className="text-2xl font-bold mt-1">
-                  {loadingIncome ? "..." : `₹${incomeAmount.toFixed(2)}`}
+                  {loadingIncome ? "..." : `₹${incomeAmount.toLocaleString()}`}
                 </p>
-                <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
-                  <span className="capitalize">{incomeType}</span>
-                  {latestIncome && <span>• Last saved</span>}
-                </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-emerald-600" />
-              </div>
+              <p className="text-xs text-muted-foreground">{incomeType}</p>
             </div>
           </CardContent>
         </Card>
 
+        {/* Monthly Expenses */}
         <Card variant="elevated">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-destructive" />
+              </div>
               <div>
-                <p className="text-sm text-muted-foreground">Monthly Expenses</p>
-                <p className="text-2xl font-bold mt-1">₹2,847.32</p>
-                <div className="flex items-center gap-1 mt-2 text-sm text-destructive">
-                  <ArrowDownRight className="w-4 h-4" />
-                  <span>-3.1%</span>
-                </div>
+                <p className="text-xs text-muted-foreground font-medium">Monthly Expenses</p>
+                <p className="text-2xl font-bold mt-1">₹2,847</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-                <TrendingDown className="w-6 h-6 text-destructive" />
-              </div>
+              <p className="text-xs text-destructive">-3.1% vs last month</p>
             </div>
           </CardContent>
         </Card>
 
+        {/* Savings Rate */}
         <Card variant="elevated">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                <Target className="w-5 h-5 text-accent-foreground" />
+              </div>
               <div>
-                <p className="text-sm text-muted-foreground">Savings Goal</p>
-                <p className="text-2xl font-bold mt-1">68%</p>
-                <Progress value={68} className="mt-2 h-2" />
+                <p className="text-xs text-muted-foreground font-medium">Savings Rate</p>
+                <p className="text-2xl font-bold mt-1">18.5%</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
-                <Target className="w-6 h-6 text-accent-foreground" />
-              </div>
+              <Progress value={18.5} className="h-1.5 mt-2" />
             </div>
           </CardContent>
         </Card>

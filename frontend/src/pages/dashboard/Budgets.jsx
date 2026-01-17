@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, AlertCircle, CheckCircle2, Plus, Trash2, Wallet, TrendingDown, PiggyBank, Target } from "lucide-react";
+import { AlertTriangle, AlertCircle, CheckCircle2, Plus, Trash2, Wallet, TrendingDown, PiggyBank, Target, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock data: Budget categories
@@ -393,67 +393,89 @@ export default function Budgets() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Total Budget */}
         <Card variant="elevated">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Total Budget</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-3 pb-6">
-            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">₹{totalBudget.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">Based on all active categories</p>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Budget</p>
+                <p className="text-2xl font-bold mt-1">₹{totalBudget.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">All categories combined</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Spent So Far */}
         <Card variant="elevated">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Spent So Far</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-3 pb-6">
-            <div className="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-red-600">₹{totalSpent.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground">From logged transactions</p>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Spent So Far</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">₹{totalSpent.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">From logged transactions</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Remaining */}
         <Card variant="elevated">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Remaining</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-3 pb-6">
-            <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-              <PiggyBank className="w-6 h-6 text-emerald-600" />
-            </div>
-            <div>
-              <p className={`text-2xl font-bold ${remainingBudget >= 0 ? "text-emerald-700" : "text-red-600"}`}>
-                ₹{remainingBudget.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">Updated in real time</p>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <PiggyBank className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Remaining</p>
+                <p className={`text-2xl font-bold mt-1 ${remainingBudget >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                  ₹{remainingBudget.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Safe to spend</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Budget Status % */}
         <Card variant="elevated">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Budget Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pb-6">
-            <div className="flex items-center gap-2">
-              <Badge className={overallStatus.color}>{overallStatus.label}</Badge>
-              <span className="text-sm text-muted-foreground">{overallUsage.toFixed(1)}% used</span>
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground font-medium">Budget Status</p>
+                <Badge className={overallStatus.color}>
+                  <span className="text-xs">{overallStatus.label}</span>
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold">{overallUsage.toFixed(0)}%</p>
+                <Progress value={Math.min(overallUsage, 120)} className="h-2.5" />
+                <p className="text-xs text-muted-foreground">Used this month</p>
+              </div>
             </div>
-            <Progress value={Math.min(overallUsage, 120)} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              Status is driven by budget vs. expenses for {selectedMonth}.
-            </p>
+          </CardContent>
+        </Card>
+
+        {/* Days Left */}
+        <Card variant="elevated" className="border-primary/40">
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Period Remaining</p>
+                <p className="text-2xl font-bold mt-1">15 days</p>
+                <p className="text-xs text-muted-foreground mt-1">50% of month passed</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

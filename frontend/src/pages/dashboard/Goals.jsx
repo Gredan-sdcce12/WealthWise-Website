@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Target, Calendar, Wallet, Sparkles, CheckCircle2, Trash2, Edit2, AlertCircle } from "lucide-react";
+import { Target, Calendar, Wallet, Sparkles, CheckCircle2, Trash2, Edit2, AlertCircle, TrendingDown, PiggyBank } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
 import { AddFundsDialog } from "@/components/dialogs/AddFundsDialog";
@@ -202,38 +202,83 @@ export default function Goals() {
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        {/* Total Goal Amount */}
         <Card variant="elevated">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Income</p>
-              <p className="text-2xl font-bold mt-1">₹{incomeTotal.toLocaleString()}</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-emerald-700" />
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Target className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Goal Amount</p>
+                <p className="text-2xl font-bold mt-1">₹{totals.target.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">All goals combined</p>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Total Saved Towards Goals */}
         <Card variant="elevated">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Expenses</p>
-              <p className="text-2xl font-bold mt-1">₹{expenseTotal.toLocaleString()}</p>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-destructive" />
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <PiggyBank className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Saved</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">₹{totals.saved.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">Progress towards goals</p>
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card variant="elevated" className="border-primary/40">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Available for Goals</p>
-              <p className="text-2xl font-bold mt-1">₹{derivedAvailableBalance.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground mt-1.5">Keeps goal creation within your limit</p>
+
+        {/* Overall Progress % */}
+        <Card variant="elevated">
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-accent-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Overall Progress</p>
+                <p className="text-2xl font-bold mt-1">{((totals.saved / totals.target) * 100).toFixed(1)}%</p>
+              </div>
+              <Progress value={Math.min((totals.saved / totals.target) * 100, 100)} className="h-1.5" />
             </div>
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Target className="w-6 h-6 text-primary" />
+          </CardContent>
+        </Card>
+
+        {/* Goals Completed */}
+        <Card variant="elevated">
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Completed</p>
+                <p className="text-2xl font-bold text-primary mt-1">{completedGoals.length}</p>
+                <p className="text-xs text-muted-foreground mt-1">Goals achieved</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Active Goals */}
+        <Card variant="elevated">
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Active</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">{activeGoals.length}</p>
+                <p className="text-xs text-muted-foreground mt-1">In progress</p>
+              </div>
             </div>
           </CardContent>
         </Card>

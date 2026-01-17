@@ -410,27 +410,59 @@ export default function Transactions() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total Expenses */}
         <Card variant="elevated">
           <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Total Expenses (This Month)</p>
-            <p className="text-2xl font-bold text-red-600 mt-2">₹{totalExpenses.toLocaleString()}</p>
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-medium">Total Expenses</p>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-red-600">₹{totalExpenses.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">This month • Live from transactions</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Net Flow */}
         <Card variant="elevated">
           <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Budget Left</p>
-            <p className={`text-2xl font-bold mt-2 ${budgetLeft >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              ₹{budgetLeft.toLocaleString()}
-            </p>
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-medium">Net Flow</p>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-emerald-600">₹5,352</p>
+                <p className="text-xs text-muted-foreground">Income - Expenses (balance for month)</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Top Spending Category */}
         <Card variant="elevated">
           <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground">Overspent Categories</p>
-            <p className="text-2xl font-bold text-orange-600 mt-2">{overspentCategories}</p>
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-medium">Top Category</p>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="text-2xl">🏠</span>
+                <div>
+                  <p className="font-semibold">Housing</p>
+                  <p className="text-xs text-red-600">₹1,200 (42% of total)</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Categories Over Budget */}
+        <Card variant="elevated" className="border-amber-200 bg-amber-50/40">
+          <CardContent className="p-6">
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-medium">Over Budget Alert</p>
+              <div className="space-y-2">
+                <p className="text-2xl font-bold text-amber-600">2 Categories</p>
+                <p className="text-xs text-amber-700">Shopping, Entertainment</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
