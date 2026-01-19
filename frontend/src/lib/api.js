@@ -103,6 +103,35 @@ class ApiClient {
     return this.request(`/transactions/summary?${params}`);
   }
 
+  async scanReceipt(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token || 'test_user_123';
+
+    const url = `${this.baseUrl}/transactions/scan-and-create`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Receipt scan failed:', error);
+      throw error;
+    }
+  }
+
   // Budget endpoints
   async createBudget(data) {
     return this.request('/budgets/', {

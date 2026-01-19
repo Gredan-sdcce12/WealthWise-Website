@@ -1,5 +1,14 @@
 """FastAPI entrypoint for WealthWise backend."""
 
+import os
+import sys
+
+# Configure Tesseract path BEFORE any imports that use it
+if os.name == 'nt':  # Windows
+	os.environ['PATH'] = r'C:\Program Files\Tesseract-OCR;' + os.environ.get('PATH', '')
+	import pytesseract
+	pytesseract.pytesseract.pytesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,7 +21,7 @@ from goals import router as goals_router
 
 app = FastAPI(title="WealthWise Backend")
 
-# CORS for frontend apps
+# CORS for frontend apps - MUST be added before routes
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=[
@@ -22,12 +31,17 @@ app.add_middleware(
 		"http://127.0.0.1:3000",
 		"http://localhost:8080",  # Other frameworks
 		"http://127.0.0.1:8080",
+		"http://localhost:8081",  # Current frontend port
+		"http://127.0.0.1:8081",
 		"http://localhost:5174",  # Vite alt port
 		"http://127.0.0.1:5174",
+		"http://192.168.2.3:8081",  # Network interface
 	],
 	allow_credentials=True,
-	allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+	allow_methods=["*"],
 	allow_headers=["*"],
+	expose_headers=["*"],
+	max_age=3600,
 )
 
 # Register routers
@@ -40,12 +54,6 @@ app.include_router(goals_router)
 @app.get("/")
 def read_root():
 	"""Lightweight root endpoint to verify server is running."""
-	return {"status": "ok"}
-
-
-@app.options("/{path:path}")
-def handle_options(path: str):
-	"""Handle CORS preflight requests."""
 	return {"status": "ok"}
 
 

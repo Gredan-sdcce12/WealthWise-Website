@@ -91,10 +91,14 @@ export default function DashboardHome() {
   const [allowUsePrevious, setAllowUsePrevious] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
     if (sharedIncome) {
       setLatestIncome(sharedIncome);
       setAllowUsePrevious(true);
-      return;
+      return () => {
+        active = false;
+      };
     }
 
     const fetchLatestIncome = async () => {
@@ -124,6 +128,9 @@ export default function DashboardHome() {
     };
 
     fetchLatestIncome();
+    return () => {
+      active = false;
+    };
   }, [sharedIncome]);
 
   useEffect(() => {
@@ -218,6 +225,36 @@ export default function DashboardHome() {
       if (pollInterval) clearInterval(pollInterval);
     };
   }, [refreshKey]);
+
+  // Expose fetchExpensesAndGoals for manual refresh
+  const handleRefreshData = () => {
+    // Re-trigger the effect by forcing a re-render
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token || "test_user_123";
+      
+      fetch(`${API_BASE}/transactions/summary?month=${month}&year=${year}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(expData => {
+          if (expData) setMonthlyExpenses(expData.total_expense || 0);
+        });
+      
+      fetch(`${API_BASE}/goals`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(goalsResponse => {
+          if (goalsResponse) {
+            setAvailableBalance(goalsResponse.available_balance || 0);
+          }
+        });
+    });
+  };
 
   const incomeAmount = sharedMonthlyIncomeTotal ?? monthlyIncomeTotal ?? 0;
   const incomeType = latestIncome?.income_type ?? "monthly";

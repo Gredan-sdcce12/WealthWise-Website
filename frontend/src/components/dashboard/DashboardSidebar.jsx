@@ -23,7 +23,7 @@ const navItems = [
   { icon: Wallet, label: "Budgets", path: "/dashboard/budgets" },
   { icon: Target, label: "Goals", path: "/dashboard/goals" },
   // { icon: Building, label: "Accounts", path: "/dashboard/accounts" },
-  { icon: Receipt, label: "Upload Bill", path: "/dashboard/upload-bill" },
+  // { icon: Receipt, label: "Upload Bill", path: "/dashboard/upload-bill" },
   { icon: PieChart, label: "Reports", path: "/dashboard/reports" },
   { icon: User, label: "Profile", path: "/dashboard/profile" },
 ];

@@ -419,19 +419,33 @@ export default function Transactions() {
     setShowAddDialog(false);
   };
 
-  const handleScanFileUpload = (e) => {
+  const handleScanFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setScanning(true);
-      setTimeout(() => {
+      try {
+        const result = await api.scanReceipt(file);
         setScannedData({
-          description: "Scanned Receipt",
-          amount: "750",
-          date: new Date().toISOString().split('T')[0],
-          category: "food",
+          description: result.parsed_data.vendor || "Scanned Receipt",
+          amount: result.parsed_data.amount.toString(),
+          date: result.parsed_data.date,
+          category: result.parsed_data.category || "shopping",
         });
+        toast({ 
+          title: "Receipt Scanned", 
+          description: "Data extracted successfully. Review and confirm below." 
+        });
+      } catch (error) {
+        console.error("OCR Error:", error);
+        toast({ 
+          title: "Scan Failed", 
+          description: error.message || "Could not process receipt. Please try another image.",
+          variant: "destructive"
+        });
+        setScannedData(null);
+      } finally {
         setScanning(false);
-      }, 2000);
+      }
     }
   };
 
@@ -840,13 +854,10 @@ export default function Transactions() {
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                 <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground mb-4">Upload a receipt image or PDF</p>
-                <div className="flex gap-2 justify-center flex-wrap">
+                <div className="flex gap-2 justify-center">
                   <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="w-4 h-4 mr-2" />
                     Upload File
-                  </Button>
-                  <Button variant="hero" onClick={() => fileInputRef.current?.click()}>
-                    📷 Take Photo
                   </Button>
                 </div>
               </div>

@@ -1,10 +1,24 @@
 """Transaction feature routes for WealthWise backend."""
 
+import os
+import re
+import io
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
+import numpy
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+# Configure Tesseract path in environment BEFORE importing pytesseract
+if os.name == 'nt':  # Windows
+	os.environ['PATH'] = r'C:\Program Files\Tesseract-OCR;' + os.environ.get('PATH', '')
+
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from pydantic import BaseModel, field_validator
+import pytesseract
+from PIL import Image
+
+# Also set pytesseract command directly
+if os.name == 'nt':
+	pytesseract.pytesseract.pytesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 from auth import get_current_user_id
 from database import get_db_connection
@@ -20,6 +34,7 @@ class TransactionCreate(BaseModel):
 	description: Optional[str] = None
 	payment_mode: Optional[str] = None
 	txn_date: Optional[date] = None
+	source: str = "manual"  # "manual" or "ocr"
 
 	@field_validator("amount")
 	@classmethod
@@ -55,7 +70,191 @@ class TransactionUpdate(BaseModel):
 # --- Helpers -----------------------------------------------------------------
 
 
-def _row_to_transaction(row: tuple) -> Dict[str, Any]:
+def _extract_receipt_data(text: str) -> Dict[str, Any]:
+	"""Extract vendor, amount, and date from OCR text.
+	
+	IMPROVED APPROACH:
+	- Amount: Look for TOTAL/GRAND TOTAL/NET AMOUNT lines
+	- Look for currency symbols (₹, Rs, INR)
+	- Category: User must select (not auto-filled)
+	- Description: Merchant name from first few lines
+	"""
+	lines = [line.strip() for line in text.split('\n') if line.strip()]
+	amount = None
+	
+	print(f">>> RAW OCR TEXT:\n{text}\n>>> END RAW TEXT")
+	print(f">>> Total lines: {len(lines)}")
+	
+	# Priority 1: Look for "GRAND TOTAL", "NET AMOUNT", "AMOUNT PAYABLE"
+	keywords = ["GRAND TOTAL", "NET AMOUNT", "AMOUNT PAYABLE", "TOTAL AMOUNT", "NET TOTAL"]
+	for keyword in keywords:
+		for line in lines:
+			line_upper = line.upper()
+			if keyword in line_upper:
+				# Try multiple patterns to extract amount
+				patterns = [
+					r'₹\s*([\d,\.]+)',  # ₹ symbol
+					r'RS\.?\s*([\d,\.]+)',  # Rs or Rs.
+					r'INR\s*([\d,\.]+)',  # INR
+					r'([\d,\.]+)\s*$',  # Number at end of line
+					r':\s*([\d,\.]+)',  # Colon followed by number
+				]
+				
+				for pattern in patterns:
+					match = re.search(pattern, line_upper)
+					if match:
+						amount_str = match.group(1).replace(',', '')
+						try:
+							amount = float(amount_str)
+							if 1 <= amount <= 100000:  # Reasonable range
+								print(f">>> {keyword} EXTRACTED: ₹{amount} from line: {line}")
+								break
+						except ValueError:
+							continue
+				if amount:
+					break
+		if amount:
+			break
+	
+	# Priority 2: Look for regular "TOTAL" line (not subtotal)
+	if not amount:
+		for line in lines:
+			line_upper = line.upper()
+			if line_upper.startswith("TOTAL") and "SUB" not in line_upper and "ITEM" not in line_upper:
+				patterns = [
+					r'₹\s*([\d,\.]+)',
+					r'RS\.?\s*([\d,\.]+)',
+					r'INR\s*([\d,\.]+)',
+					r'([\d,\.]+)\s*$',
+					r':\s*([\d,\.]+)',
+				]
+				
+				for pattern in patterns:
+					match = re.search(pattern, line)
+					if match:
+						amount_str = match.group(1).replace(',', '')
+						try:
+							amount = float(amount_str)
+							if 1 <= amount <= 100000:
+								print(f">>> TOTAL EXTRACTED: ₹{amount} from line: {line}")
+								break
+						except ValueError:
+							continue
+				if amount:
+					break
+	
+	# Priority 3: Look for largest amount with currency symbol in last 10 lines
+	if not amount:
+		amounts_found = []
+		for line in lines[-10:]:
+			patterns = [
+				r'₹\s*([\d,\.]+)',
+				r'RS\.?\s*([\d,\.]+)',
+				r'INR\s*([\d,\.]+)',
+			]
+			for pattern in patterns:
+				matches = re.findall(pattern, line.upper())
+				for match in matches:
+					try:
+						val = float(match.replace(',', ''))
+						if 1 <= val <= 100000:
+							amounts_found.append((val, line))
+					except ValueError:
+						continue
+		
+		if amounts_found:
+			amount, source_line = max(amounts_found, key=lambda x: x[0])
+			print(f">>> FALLBACK AMOUNT (with currency): ₹{amount} from line: {source_line}")
+	
+	# Last resort: Look for reasonable amounts in last 5 lines
+	if not amount:
+		for line in lines[-5:]:
+			match = re.search(r'(\d+\.\d{2})', line)
+			if match:
+				try:
+					amount = float(match.group(1))
+					if 10 <= amount <= 100000:
+						print(f">>> LAST RESORT AMOUNT: ₹{amount}")
+						break
+				except ValueError:
+					continue
+	
+	# Extract date (DD/MM/YYYY, MM/DD/YYYY, or DD-MM-YYYY formats)
+	date_pattern = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'
+	date_match = re.search(date_pattern, text)
+	
+	date_str = None
+	if date_match:
+		date_str = date_match.group(1)
+		try:
+			for fmt in ['%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y', '%m-%d-%Y', '%d/%m/%y', '%m-%d-%y']:
+				try:
+					parsed_date = datetime.strptime(date_str, fmt).date()
+					date_str = parsed_date.isoformat()
+					break
+				except ValueError:
+					continue
+		except Exception:
+			date_str = None
+	
+	if not date_str:
+		date_str = datetime.utcnow().date().isoformat()
+	
+	# ✅ FIX 3: Extract merchant name only (first meaningful line)
+	vendor = "Receipt"
+	for line in lines:
+		line_clean = line.strip()
+		# Skip empty lines and common headers
+		if (line_clean and len(line_clean) > 2 and 
+			"date" not in line_clean.lower() and
+			"item" not in line_clean.lower() and
+			"qty" not in line_clean.lower() and
+			"amount" not in line_clean.lower() and
+			"thank" not in line_clean.lower() and
+			"total" not in line_clean.lower()):
+			vendor = line_clean
+			break
+	vendor = vendor[:50]
+	
+	# ✅ FIX 2: Category Handling - DON'T auto-fill, let user select
+	# Category will be selected by user in the UI
+	
+	return {
+		"vendor": vendor or "Receipt",
+		"amount": amount or 0.0,
+		"date": date_str,
+		"category": None  # User must select category
+	}
+
+
+def _guess_category(text: str) -> str:
+	"""Guess transaction category based on receipt content."""
+	text_lower = text.lower()
+	
+	category_keywords = {
+		"groceries": ["grocery", "supermarket", "whole foods", "kroger", "safeway", "produce", "dairy", "meat", "noodles", "sugar", "salt", "soap", "bazaar"],
+		"shopping": ["mall", "retail", "shop", "store", "amazon", "ebay", "clothes", "apparel", "bazaar", "plaza"],
+		"dining": ["restaurant", "cafe", "coffee", "pizza", "burger", "bistro", "bar"],
+		"transportation": ["fuel", "gas", "petrol", "uber", "lyft", "taxi", "parking", "toll"],
+		"entertainment": ["movie", "cinema", "theater", "concert", "game", "spotify", "netflix"],
+		"utilities": ["electric", "water", "internet", "phone", "gas bill", "utility"],
+		"health": ["pharmacy", "doctor", "hospital", "medical", "clinic", "health"],
+	}
+	
+	# Check for "Noodles", "Maggi", etc - groceries has higher priority
+	for category in ["groceries", "shopping", "dining", "transportation", "entertainment", "utilities", "health"]:
+		keywords = category_keywords[category]
+		for keyword in keywords:
+			if keyword in text_lower:
+				return category
+	
+	return "shopping"  # Default category
+
+
+# --- Helpers -----------------------------------------------------------------
+
+def _row_to_transaction(row):
+	"""Convert database row to transaction dict."""
 	(
 		txn_id,
 		user_id,
@@ -67,6 +266,7 @@ def _row_to_transaction(row: tuple) -> Dict[str, Any]:
 		txn_date,
 		month,
 		year,
+		source,
 		created_at,
 		updated_at,
 	) = row
@@ -81,6 +281,7 @@ def _row_to_transaction(row: tuple) -> Dict[str, Any]:
 		"txn_date": txn_date.isoformat() if txn_date else None,
 		"month": month,
 		"year": year,
+		"source": source,
 		"created_at": created_at.isoformat() if created_at else None,
 		"updated_at": updated_at.isoformat() if updated_at else None,
 	}
@@ -172,6 +373,8 @@ def _check_budget_warning(user_id: str, category: str, new_amount: float, txn_da
 
 @router.post("/")
 def create_transaction(payload: TransactionCreate, user_id: str = Depends(get_current_user_id)):
+	# Log received transaction data
+	print(f">>> BACKEND: Received transaction - Description: {payload.description}, Amount: {payload.amount}, Source: {payload.source}")
 	txn_dt = payload.txn_date or datetime.utcnow().date()
 	month = txn_dt.month
 	year = txn_dt.year
@@ -188,10 +391,10 @@ def create_transaction(payload: TransactionCreate, user_id: str = Depends(get_cu
 			cur.execute(
 				"""
 				INSERT INTO transactions (
-					user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, created_at, updated_at
+					user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at
 				)
-				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
-				RETURNING id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, created_at, updated_at;
+				VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+				RETURNING id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at;
 				""",
 				(
 					user_id,
@@ -203,6 +406,7 @@ def create_transaction(payload: TransactionCreate, user_id: str = Depends(get_cu
 					txn_dt,
 					month,
 					year,
+					payload.source,
 				),
 			)
 			row = cur.fetchone()
@@ -259,7 +463,7 @@ def list_transactions(
 		with conn.cursor() as cur:
 			cur.execute(
 				f"""
-				SELECT id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, created_at, updated_at
+				SELECT id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at
 				FROM transactions
 				WHERE {where_sql}
 				ORDER BY txn_date DESC, created_at DESC
@@ -335,7 +539,7 @@ def get_transaction(txn_id: int, user_id: str = Depends(get_current_user_id)):
 		with conn.cursor() as cur:
 			cur.execute(
 				"""
-				SELECT id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, created_at, updated_at
+				SELECT id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at
 				FROM transactions
 				WHERE id = %s AND user_id = %s;
 				""",
@@ -389,7 +593,7 @@ def update_transaction(txn_id: int, payload: TransactionUpdate, user_id: str = D
 				UPDATE transactions
 				SET {set_sql}
 				WHERE id = %s AND user_id = %s
-				RETURNING id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, created_at, updated_at;
+				RETURNING id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at;
 				""",
 				tuple(params),
 			)
@@ -428,3 +632,225 @@ def delete_transaction(txn_id: int, user_id: str = Depends(get_current_user_id))
 		raise HTTPException(status_code=500, detail=f"Failed to delete transaction: {exc}") from exc
 	finally:
 		conn.close()
+
+@router.post("/scan-and-create")
+async def scan_receipt_and_create(file: UploadFile = File(...), user_id: str = Depends(get_current_user_id)):
+	"""
+	Scan a receipt AND create a transaction directly with source='ocr'.
+	This is the new simplified flow - no need to fill in forms.
+	"""
+	print(f"\n>>> OCR: SCAN-AND-CREATE endpoint called - File: {file.filename}, User: {user_id}")
+	try:
+		# Validate file type
+		allowed_types = {"image/jpeg", "image/png", "image/jpg", "application/pdf"}
+		if file.content_type not in allowed_types:
+			raise HTTPException(
+				status_code=400,
+				detail=f"Invalid file type. Allowed: JPEG, PNG, PDF. Got: {file.content_type}"
+			)
+		
+		# Read file
+		contents = await file.read()
+		image = Image.open(io.BytesIO(contents))
+		
+		# Preprocess image
+		if image.mode != 'L':
+			image = image.convert('L')
+		
+		from PIL import ImageFilter, ImageEnhance, ImageOps
+		
+		if image.width < 300 or image.height < 300:
+			scale_factor = max(300 / image.width, 300 / image.height)
+			new_size = (int(image.width * scale_factor), int(image.height * scale_factor))
+			image = image.resize(new_size, Image.Resampling.LANCZOS)
+		
+		image = image.filter(ImageFilter.GaussianBlur(radius=0.3))
+		enhancer = ImageEnhance.Contrast(image)
+		image = enhancer.enhance(3.5)
+		enhancer = ImageEnhance.Brightness(image)
+		image = enhancer.enhance(1.2)
+		enhancer = ImageEnhance.Sharpness(image)
+		image = enhancer.enhance(2.5)
+		
+		# Run OCR
+		try:
+			extracted_text = pytesseract.image_to_string(image)
+		except Exception as e:
+			raise HTTPException(
+				status_code=500,
+				detail=f"OCR processing failed. Ensure Tesseract is installed: {str(e)}"
+			)
+		
+		if not extracted_text or not extracted_text.strip():
+			raise HTTPException(
+				status_code=400,
+				detail="Could not extract any text from image. Please ensure receipt is clear and readable."
+			)
+		
+		# Parse extracted text
+		receipt_data = _extract_receipt_data(extracted_text)
+		print(f">>> OCR: Extracted - Vendor: {receipt_data['vendor']}, Amount: {receipt_data['amount']}, Date: {receipt_data['date']}")
+		
+		# Create transaction directly with source='ocr'
+		conn = get_db_connection()
+		try:
+			with conn.cursor() as cur:
+				txn_date = receipt_data["date"] or datetime.utcnow().date()
+				month = txn_date.month
+				year = txn_date.year
+				
+				cur.execute(
+					"""
+					INSERT INTO transactions (
+						user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at
+					)
+					VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+					RETURNING id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at;
+					""",
+					(
+						user_id,
+						receipt_data["amount"],
+						"expense",
+						receipt_data["category"],
+						receipt_data["vendor"],
+						"card",
+						txn_date,
+						month,
+						year,
+						"ocr"  # CRITICAL: Set source to 'ocr'
+					),
+				)
+				row = cur.fetchone()
+			conn.commit()
+			
+			result = _row_to_transaction(row)
+			print(f">>> OCR: Transaction created with ID={result['id']}, source='{result['source']}'")
+			
+			return {
+				"success": True,
+				"transaction": result,
+				"message": f"Receipt scanned and transaction created: ₹{receipt_data['amount']} from {receipt_data['vendor']}"
+			}
+		finally:
+			conn.close()
+	
+	except HTTPException:
+		raise
+	except Exception as exc:
+		print(f">>> OCR: Error in scan-and-create: {str(exc)}")
+		raise HTTPException(status_code=500, detail=f"Failed to process receipt: {str(exc)}") from exc
+
+
+@router.post("/scan-receipt")
+async def scan_receipt(file: UploadFile = File(...), user_id: str = Depends(get_current_user_id)):
+	"""
+	Scan a receipt image using Tesseract OCR.
+	Extracts vendor name, amount, date, and guesses category.
+	"""
+	print(f"\n>>> SCAN RECEIPT CALLED - File: {file.filename}, User: {user_id}")
+	try:
+		# Validate file type
+		allowed_types = {"image/jpeg", "image/png", "image/jpg", "application/pdf"}
+		if file.content_type not in allowed_types:
+			raise HTTPException(
+				status_code=400,
+				detail=f"Invalid file type. Allowed: JPEG, PNG, PDF. Got: {file.content_type}"
+			)
+		
+		print(f"File type OK: {file.content_type}")
+		
+		# Read file
+		contents = await file.read()
+		print(f"File size: {len(contents)} bytes")
+		
+		image = Image.open(io.BytesIO(contents))
+		print(f"Image size: {image.size}, Format: {image.format}")
+		
+		# Preprocess image for better OCR accuracy
+		# Convert to grayscale
+		if image.mode != 'L':
+			image = image.convert('L')
+		
+		# Apply additional preprocessing for better handwriting recognition
+		from PIL import ImageFilter, ImageEnhance, ImageOps
+		
+		# Resize if image is very small (improves OCR accuracy)
+		if image.width < 300 or image.height < 300:
+			scale_factor = max(300 / image.width, 300 / image.height)
+			new_size = (int(image.width * scale_factor), int(image.height * scale_factor))
+			image = image.resize(new_size, Image.Resampling.LANCZOS)
+			print(f"Image resized to {new_size}")
+		
+		# Apply slight blur to reduce noise FIRST (before contrast)
+		image = image.filter(ImageFilter.GaussianBlur(radius=0.3))
+		
+		# Increase contrast - critical for handwritten text visibility
+		enhancer = ImageEnhance.Contrast(image)
+		image = enhancer.enhance(3.5)  # Increased to 3.5x for better handwriting clarity
+		
+		# Enhance brightness for faded/light ink
+		enhancer = ImageEnhance.Brightness(image)
+		image = enhancer.enhance(1.2)  # Increased to 1.2 for better visibility
+		
+		# Enhance sharpness for crisp text edges (after contrast/brightness)
+		enhancer = ImageEnhance.Sharpness(image)
+		image = enhancer.enhance(2.5)  # Slightly reduced to prevent over-sharpening
+		
+		# Apply a small median filter to clean up noise while preserving edges
+		image = image.filter(ImageFilter.MedianFilter(size=3))
+		
+		# Optional: Apply adaptive histogram equalization-like effect
+		# by normalizing the image distribution
+		img_array = numpy.array(image)
+		p2, p98 = numpy.percentile(img_array, (2, 98))
+		img_array = numpy.clip((img_array - p2) / (p98 - p2) * 255, 0, 255).astype(numpy.uint8)
+		image = Image.fromarray(img_array)
+		print(f"Applied adaptive normalization for better contrast")
+		
+		# Extract text using Tesseract OCR with optimized settings
+		try:
+			# Use PSM (Page Segmentation Mode) 6 for mixed text blocks
+			# Use OEM (OCR Engine Mode) 3 for legacy + LSTM (better for handwriting)
+			extracted_text = pytesseract.image_to_string(
+				image,
+				config='--psm 6 --oem 3'
+			)
+			print(f"OCR completed")
+			print(f">>> RAW OCR TEXT:\n{extracted_text}\n>>> END RAW TEXT")
+		except Exception as e:
+			print(f"OCR ERROR: {str(e)}")
+			raise HTTPException(
+				status_code=500,
+				detail=f"OCR processing failed. Ensure Tesseract is installed: {str(e)}"
+			)
+		
+		if not extracted_text or not extracted_text.strip():
+			raise HTTPException(
+				status_code=400,
+				detail="Could not extract any text from image. Please ensure receipt is clear and readable."
+			)
+		
+		# Parse extracted text to get structured data
+		receipt_data = _extract_receipt_data(extracted_text)
+		
+		# DEBUG: Log what was extracted
+		print(f"\n=== OCR DEBUG ===")
+		print(f"Extracted Text:\n{extracted_text}")
+		print(f"\nParsed Data: {receipt_data}")
+		print(f"=== END DEBUG ===\n")
+		
+		return {
+			"success": True,
+			"extracted_text": extracted_text,
+			"parsed_data": {
+				"vendor": receipt_data["vendor"],
+				"amount": receipt_data["amount"],
+				"date": receipt_data["date"],
+				"category": receipt_data["category"]
+			}
+		}
+	
+	except HTTPException:
+		raise
+	except Exception as exc:  # pragma: no cover - runtime guard
+		raise HTTPException(status_code=500, detail=f"Failed to process receipt: {str(exc)}") from exc
