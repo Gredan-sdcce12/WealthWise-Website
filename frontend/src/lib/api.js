@@ -114,7 +114,7 @@ class ApiClient {
     formData.append('file', file);
     
     const authHeaders = await this.withAuthHeaders();
-    const response = await fetch(`${this.baseUrl}/transactions/scan`, {
+    const response = await fetch(`${this.baseUrl}/transactions/scan-and-create`, {
       method: 'POST',
       headers: authHeaders,
       body: formData,
@@ -187,7 +187,8 @@ class ApiClient {
       ...(month && { month }),
       ...(year && { year }),
     });
-    return this.request(`/income/total?${params}`);
+    const query = params.toString();
+    return this.request(`/income/total${query ? `?${query}` : ''}`);
   }
 
   async copyPreviousIncome() {

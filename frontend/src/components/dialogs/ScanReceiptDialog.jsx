@@ -34,8 +34,10 @@ export function ScanReceiptDialog({ trigger, onReceiptScanned }) {
         console.log(">>> OCR: Starting receipt upload and creation");
         const result = await api.scanReceipt(file);
         console.log(">>> OCR: Backend response:", result);
+        console.log(">>> OCR: Response type:", typeof result);
+        console.log(">>> OCR: result.transaction:", result?.transaction);
         
-        if (result.transaction) {
+        if (result?.transaction) {
           console.log(">>> OCR: Transaction created directly with source:", result.transaction.source);
           
           // Show success and close
@@ -52,6 +54,9 @@ export function ScanReceiptDialog({ trigger, onReceiptScanned }) {
           if (onReceiptScanned) {
             onReceiptScanned(result.transaction);
           }
+        } else {
+          console.error(">>> OCR: No transaction in response:", result);
+          throw new Error("Invalid response: missing transaction data");
         }
       } catch (error) {
         console.error("OCR Error:", error);

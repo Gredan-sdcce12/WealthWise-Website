@@ -85,34 +85,29 @@ def _extract_receipt_data(text: str) -> Dict[str, Any]:
 	print(f">>> RAW OCR TEXT:\n{text}\n>>> END RAW TEXT")
 	print(f">>> Total lines: {len(lines)}")
 	
-	# Priority 1: Look for "GRAND TOTAL", "NET AMOUNT", "AMOUNT PAYABLE"
-	keywords = ["GRAND TOTAL", "NET AMOUNT", "AMOUNT PAYABLE", "TOTAL AMOUNT", "NET TOTAL"]
+	# Priority 1: Look for 'GRAND TOTAL' line with currency symbol, ignore lines with 'Receipt', 'Phone', etc.
+	keywords = ["GRAND TOTAL", "NET AMOUNT", "AMOUNT PAYABLE", "TOTAL AMOUNT", "NET TOTAL", "AMOUNT TO BE PAID"]
 	for keyword in keywords:
 		for line in lines:
 			line_upper = line.upper()
+			# Ignore lines with 'RECEIPT', 'PHONE', etc.
+			if any(skip in line_upper for skip in ["RECEIPT", "PHONE", "DATE", "STATION", "BARCODE"]):
+				continue
 			if keyword in line_upper:
-				# Try multiple patterns to extract amount
-				patterns = [
-					r'₹\s*([\d,\.]+)',  # ₹ symbol
-					r'RS\.?\s*([\d,\.]+)',  # Rs or Rs.
-					r'INR\s*([\d,\.]+)',  # INR
-					r'([\d,\.]+)\s*$',  # Number at end of line
-					r':\s*([\d,\.]+)',  # Colon followed by number
-				]
-				
-				for pattern in patterns:
-					match = re.search(pattern, line_upper)
-					if match:
-						amount_str = match.group(1).replace(',', '')
-						try:
-							amount = float(amount_str)
-							if 1 <= amount <= 100000:  # Reasonable range
-								print(f">>> {keyword} EXTRACTED: ₹{amount} from line: {line}")
-								break
-						except ValueError:
-							continue
-				if amount:
-					break
+				# Extract the last number after the keyword (to avoid picking up receipt numbers)
+				# Example: 'Grand Total           ₹379.00' or 'Grand Total 379.00'
+				numbers = re.findall(r'(\d+(?:,\d+)*(?:\.\d{2})?)', line)
+				if numbers:
+					amount_str = numbers[-1].replace(',', '')
+					try:
+						amount = float(amount_str)
+						if 1 <= amount <= 100000:
+							print(f">>> GRAND TOTAL STRICT: ₹{amount} from line: {line}")
+							break
+					except ValueError:
+						continue
+			if amount:
+				break
 		if amount:
 			break
 	
@@ -143,17 +138,21 @@ def _extract_receipt_data(text: str) -> Dict[str, Any]:
 				if amount:
 					break
 	
-	# Priority 3: Look for largest amount with currency symbol in last 10 lines
+	# Priority 3: Look for largest amount with currency symbol in last 10 lines (avoid receipt numbers)
 	if not amount:
 		amounts_found = []
 		for line in lines[-10:]:
+			# Skip lines that look like receipt numbers, phone numbers, or dates
+			if re.search(r'\d{5,}', line) and not re.search(r'[₹Rs]', line, re.IGNORECASE):
+				continue  # Skip lines with 5+ consecutive digits without currency symbol
+			
 			patterns = [
-				r'₹\s*([\d,\.]+)',
-				r'RS\.?\s*([\d,\.]+)',
-				r'INR\s*([\d,\.]+)',
+				r'₹\s*(\d+(?:,\d+)*(?:\.\d{2})?)',  # ₹ with proper number format
+				r'RS\.?\s*(\d+(?:,\d+)*(?:\.\d{2})?)',  # Rs with proper format
+				r'INR\s*(\d+(?:,\d+)*(?:\.\d{2})?)',  # INR with proper format
 			]
 			for pattern in patterns:
-				matches = re.findall(pattern, line.upper())
+				matches = re.findall(pattern, line, re.IGNORECASE)
 				for match in matches:
 					try:
 						val = float(match.replace(',', ''))
@@ -166,15 +165,16 @@ def _extract_receipt_data(text: str) -> Dict[str, Any]:
 			amount, source_line = max(amounts_found, key=lambda x: x[0])
 			print(f">>> FALLBACK AMOUNT (with currency): ₹{amount} from line: {source_line}")
 	
-	# Last resort: Look for reasonable amounts in last 5 lines
+	# Last resort: Look for reasonable decimal amounts (XX.00 format) in last 5 lines
 	if not amount:
 		for line in lines[-5:]:
-			match = re.search(r'(\d+\.\d{2})', line)
+			# Only match amounts with decimal points to avoid receipt numbers
+			match = re.search(r'\b(\d{2,5}\.\d{2})\b', line)
 			if match:
 				try:
 					amount = float(match.group(1))
 					if 10 <= amount <= 100000:
-						print(f">>> LAST RESORT AMOUNT: ₹{amount}")
+						print(f">>> LAST RESORT AMOUNT: ₹{amount} from line: {line}")
 						break
 				except ValueError:
 					continue
@@ -190,6 +190,12 @@ def _extract_receipt_data(text: str) -> Dict[str, Any]:
 			for fmt in ['%d/%m/%Y', '%m/%d/%Y', '%d-%m-%Y', '%m-%d-%Y', '%d/%m/%y', '%m-%d-%y']:
 				try:
 					parsed_date = datetime.strptime(date_str, fmt).date()
+					# Sanity check: if date is more than 1 year in the past, use today's date
+					days_diff = (datetime.utcnow().date() - parsed_date).days
+					if days_diff > 365:
+						print(f">>> Date too old ({parsed_date}), using today's date instead")
+						date_str = None
+						break
 					date_str = parsed_date.isoformat()
 					break
 				except ValueError:
@@ -695,7 +701,11 @@ async def scan_receipt_and_create(file: UploadFile = File(...), user_id: str = D
 		conn = get_db_connection()
 		try:
 			with conn.cursor() as cur:
-				txn_date = receipt_data["date"] or datetime.utcnow().date()
+				# Convert ISO date string back to date object
+				if isinstance(receipt_data["date"], str):
+					txn_date = datetime.fromisoformat(receipt_data["date"]).date()
+				else:
+					txn_date = receipt_data["date"] or datetime.utcnow().date()
 				month = txn_date.month
 				year = txn_date.year
 				

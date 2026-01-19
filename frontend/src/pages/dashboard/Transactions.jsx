@@ -54,6 +54,7 @@ export default function Transactions() {
   const [showScanDialog, setShowScanDialog] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scannedData, setScannedData] = useState(null);
+  const [scannedTransactionId, setScannedTransactionId] = useState(null);  // Track OCR transaction for rescan
   const fileInputRef = useRef(null);
 
   // Filter states
@@ -180,6 +181,7 @@ export default function Transactions() {
         date: t.txn_date,
         description: t.description || 'No description',
         paymentMode: t.payment_mode,
+        source: t.source || 'manual',  // Include source field for OCR/Manual badge
       }));
       
       console.log("[Transactions] Formatted:", formatted);
@@ -425,16 +427,28 @@ export default function Transactions() {
       setScanning(true);
       try {
         const result = await api.scanReceipt(file);
-        setScannedData({
-          description: result.parsed_data.vendor || "Scanned Receipt",
-          amount: result.parsed_data.amount.toString(),
-          date: result.parsed_data.date,
-          category: result.parsed_data.category || "shopping",
-        });
-        toast({ 
-          title: "Receipt Scanned", 
-          description: "Data extracted successfully. Review and confirm below." 
-        });
+        console.log(">>> OCR Transactions: Backend response:", result);
+        
+        // New flow: transaction created directly by backend with source='ocr'
+        if (result?.transaction) {
+          console.log(">>> OCR Transactions: Transaction created with source:", result.transaction.source);
+          
+          // Store transaction ID so we can delete if user rescans
+          setScannedTransactionId(result.transaction.id);
+          
+          setScannedData({
+            description: result.transaction.description || "Scanned Receipt",
+            amount: result.transaction.amount.toString(),
+            date: result.transaction.txn_date,
+            category: result.transaction.category || "shopping",
+          });
+          toast({ 
+            title: "Receipt Scanned", 
+            description: "Data extracted successfully. Review and confirm below." 
+          });
+        } else {
+          throw new Error("Invalid response: missing transaction data");
+        }
       } catch (error) {
         console.error("OCR Error:", error);
         toast({ 
@@ -451,18 +465,18 @@ export default function Transactions() {
 
   const handleScanSave = () => {
     if (scannedData) {
-      setFormData({
-        amount: scannedData.amount,
-        type: "expense",
-        category: scannedData.category,
-        date: scannedData.date,
-        description: scannedData.description,
-        paymentMode: "",
-      });
+      // OCR transaction is already created in backend with source='ocr'
+      // Clear the transaction ID so it won't be deleted on dialog close
+      setScannedTransactionId(null);
+      // Just close the dialog and refresh
       setShowScanDialog(false);
       setScannedData(null);
-      setShowAddDialog(true);
-      toast({ title: "Receipt Scanned", description: "Review and complete the form" });
+      toast({ 
+        title: "Receipt Saved", 
+        description: "Transaction created from OCR scan" 
+      });
+      // Trigger refresh of transactions list
+      fetchTransactions();
     }
   };
 
@@ -684,9 +698,13 @@ export default function Transactions() {
                       <td className="py-3 px-4 text-sm font-medium">
                         <div className="flex items-center gap-2">
                           {transaction.description}
-                          {transaction.source === 'ocr' && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700">
+                          {transaction.source === 'ocr' ? (
+                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-300">
                               📷 OCR
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-gray-600">
+                              ✏️ Manual
                             </Badge>
                           )}
                         </div>
@@ -845,7 +863,27 @@ export default function Transactions() {
       </Dialog>
 
       {/* Scan Receipt Dialog */}
-      <Dialog open={showScanDialog} onOpenChange={setShowScanDialog}>
+      <Dialog open={showScanDialog} onOpenChange={async (open) => {
+        // If dialog is closing and there's a scanned transaction that wasn't saved, delete it
+        if (!open && scannedTransactionId && scannedData) {
+          try {
+            await api.deleteTransaction(scannedTransactionId);
+            console.log(">>> OCR: Deleted unsaved scan transaction:", scannedTransactionId);
+            toast({ 
+              title: "Scan Cancelled", 
+              description: "Receipt scan was discarded" 
+            });
+          } catch (error) {
+            console.error(">>> OCR: Error deleting unsaved scan:", error);
+          }
+          setScannedTransactionId(null);
+        }
+        setShowScanDialog(open);
+        if (!open) {
+          setScannedData(null);
+          setScannedTransactionId(null);
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Scan Receipt (OCR)</DialogTitle>
@@ -928,7 +966,20 @@ export default function Transactions() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setScannedData(null)}
+                    onClick={async () => {
+                      // Delete the previous OCR transaction if user rescans
+                      if (scannedTransactionId) {
+                        try {
+                          await api.deleteTransaction(scannedTransactionId);
+                          console.log(">>> OCR: Deleted previous scan transaction:", scannedTransactionId);
+                        } catch (error) {
+                          console.error(">>> OCR: Error deleting previous scan:", error);
+                        }
+                      }
+                      setScannedData(null);
+                      setScannedTransactionId(null);
+                      fileInputRef.current.value = "";
+                    }}
                     className="flex-1"
                   >
                     Rescan
