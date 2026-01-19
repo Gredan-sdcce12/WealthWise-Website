@@ -25,15 +25,20 @@ class ApiClient {
   async request(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
     const authHeaders = await this.withAuthHeaders(options.headers);
+    
     const config = {
+      method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...authHeaders,
       },
-      ...options,
     };
+    
+    if (options.body) {
+      config.body = options.body;
+    }
 
-    console.log("[API] Request:", options.method || 'GET', url, "Headers:", config.headers);
+    console.log("[API] Request:", config.method, url, "Headers:", config.headers);
 
     try {
       const response = await fetch(url, config);
@@ -103,6 +108,32 @@ class ApiClient {
     return this.request(`/transactions/summary?${params}`);
   }
 
+  // OCR endpoint
+  async scanReceipt(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const authHeaders = await this.withAuthHeaders();
+    const response = await fetch(`${this.baseUrl}/transactions/scan`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  }
+
   // Budget endpoints
   async createBudget(data) {
     return this.request('/budgets/', {
@@ -137,6 +168,32 @@ class ApiClient {
 
   async getCategories() {
     return this.request('/budgets/categories');
+  }
+
+  // Income endpoints
+  async createIncome(data) {
+    return this.request('/income/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getLatestIncome() {
+    return this.request('/income/latest');
+  }
+
+  async getIncomeTotal(month, year) {
+    const params = new URLSearchParams({
+      ...(month && { month }),
+      ...(year && { year }),
+    });
+    return this.request(`/income/total?${params}`);
+  }
+
+  async copyPreviousIncome() {
+    return this.request('/income/same-as-previous', {
+      method: 'POST',
+    });
   }
 
   // Goal endpoints

@@ -33,6 +33,7 @@ import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
 import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
 import { AddIncomeDialog } from "@/components/dialogs/AddIncomeDialog";
 import { supabase } from "@/lib/supabase";
+import { api } from "@/lib/api";
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -99,18 +100,7 @@ export default function DashboardHome() {
 
     const fetchLatestIncome = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (!active) return;
-        const token = data?.session?.access_token;
-        if (!token) {
-          return;
-        }
-
-        const res = await fetch(`${API_BASE}/income/latest`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Income fetch failed (${res.status})`);
-        const body = await res.json();
+        const body = await api.getLatestIncome();
         const hasIncome = body?.amount !== null && body?.amount !== undefined;
         if (hasIncome) {
           setLatestIncome(body);
@@ -139,19 +129,8 @@ export default function DashboardHome() {
 
     const fetchMonthlyIncomeTotal = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (!active) return;
-        const token = data?.session?.access_token;
-        if (!token) {
-          setIsLoadingMonthlyTotal(false);
-          return;
-        }
-
-        const res = await fetch(`${API_BASE}/income/total`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(`Income total fetch failed (${res.status})`);
-        const body = await res.json();
+        const now = new Date();
+        const body = await api.getIncomeTotal(now.getMonth() + 1, now.getFullYear());
         setMonthlyIncomeTotal(typeof body.total === "number" ? body.total : 0);
       } catch (err) {
         console.warn("Unable to load monthly income total", err);
