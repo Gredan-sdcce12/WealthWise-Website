@@ -681,7 +681,16 @@ export default function Transactions() {
                         <span className="text-xl">{getCategoryIcon(transaction.category)}</span>
                         <p className="text-xs text-muted-foreground mt-1">{getCategoryLabel(transaction.category)}</p>
                       </td>
-                      <td className="py-3 px-4 text-sm font-medium">{transaction.description}</td>
+                      <td className="py-3 px-4 text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          {transaction.description}
+                          {transaction.source === 'ocr' && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700">
+                              📷 OCR
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 px-4 text-sm">{formatDate(transaction.date)}</td>
                       <td className="py-3 px-4">
                         <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted">

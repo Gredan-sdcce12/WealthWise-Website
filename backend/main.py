@@ -11,6 +11,7 @@ if os.name == 'nt':  # Windows
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from database import get_db_connection
 from income import router as income_router
@@ -24,20 +25,8 @@ app = FastAPI(title="WealthWise Backend")
 # CORS for frontend apps - MUST be added before routes
 app.add_middleware(
 	CORSMiddleware,
-	allow_origins=[
-		"http://localhost:5173",  # Vite default
-		"http://127.0.0.1:5173",  # Vite default
-		"http://localhost:3000",  # React/Next.js
-		"http://127.0.0.1:3000",
-		"http://localhost:8080",  # Other frameworks
-		"http://127.0.0.1:8080",
-		"http://localhost:8081",  # Current frontend port
-		"http://127.0.0.1:8081",
-		"http://localhost:5174",  # Vite alt port
-		"http://127.0.0.1:5174",
-		"http://192.168.2.3:8081",  # Network interface
-	],
-	allow_credentials=True,
+	allow_origins=["*"],  # Allow all origins in development
+	allow_credentials=False,
 	allow_methods=["*"],
 	allow_headers=["*"],
 	expose_headers=["*"],
