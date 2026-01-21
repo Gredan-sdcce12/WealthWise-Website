@@ -83,23 +83,45 @@ def _extract_receipt_data(text: str) -> Dict[str, Any]:
     print(f">>> RAW OCR TEXT:\n{text}\n>>> END RAW TEXT")
     print(f">>> Total lines: {len(lines)}")
 
-    # Strict amount extraction: Only trust lines with TOTAL / GRAND TOTAL
-    for line in lines:
+    # Strict amount extraction: Always prefer GRAND TOTAL if present
+    grand_total_found = False
+    for i, line in enumerate(lines):
         line_upper = line.upper()
-        if "GRAND TOTAL" in line_upper:
-            match = re.search(r'(\d+\.\d{2})', line)
-            if match:
-                amount = float(match.group(1))
-                print(f">>> GRAND TOTAL STRICT: ₹{amount} from line: {line}")
+        if "GRAND" in line_upper and "TOTAL" in line_upper:
+            grand_total_found = True
+            print(f"[OCR DEBUG] GRAND TOTAL line: '{line}'")
+            if i + 1 < len(lines):
+                print(f"[OCR DEBUG] Next line after GRAND TOTAL: '{lines[i+1]}'")
+            # Remove currency symbols and non-numeric chars except dot and comma
+            clean_line = re.sub(r"[^0-9.,]", "", line)
+            matches = re.findall(r'(\d{1,3}[.,]\d{2})', clean_line)
+            if matches:
+                amount = float(matches[-1].replace(",", ""))
+                print(f">>> GRAND TOTAL FLEX: ₹{amount} from line: {line}")
                 break
-    if not amount:
-        for line in lines:
+            # If not found on the same line, check the next line (common in receipts)
+            if i + 1 < len(lines):
+                clean_next = re.sub(r"[^0-9.,]", "", lines[i + 1])
+                matches = re.findall(r'(\d{1,3}[.,]\d{2})', clean_next)
+                if matches:
+                    amount = float(matches[-1].replace(",", ""))
+                    print(f">>> GRAND TOTAL FLEX (next line): ₹{amount} from line: {lines[i+1]}")
+                    break
+    # Fallback: If not found, look for TOTAL (but not GST or other lines)
+    if not amount and not grand_total_found:
+        for i, line in enumerate(lines):
             line_upper = line.upper()
-            if "TOTAL" in line_upper and "GST" not in line_upper:
-                match = re.search(r'(\d+\.\d{2})', line)
-                if match:
-                    amount = float(match.group(1))
-                    print(f">>> TOTAL STRICT: ₹{amount} from line: {line}")
+            if (
+                "TOTAL" in line_upper
+                and "GRAND" not in line_upper
+                and "GST" not in line_upper
+                and "SUB" not in line_upper
+            ):
+                clean_line = re.sub(r"[^0-9.,]", "", line)
+                matches = re.findall(r'(\d{1,3}[.,]\d{2})', clean_line)
+                if matches:
+                    amount = float(matches[-1].replace(",", ""))
+                    print(f">>> TOTAL FLEX: ₹{amount} from line: {line}")
                     break
 
     # Strict date extraction: Only extract if present, never auto-generate
