@@ -118,18 +118,42 @@ def _extract_receipt_data(text: str) -> Dict[str, Any]:
                 and "SUB" not in line_upper
             ):
                 clean_line = re.sub(r"[^0-9.,]", "", line)
-                matches = re.findall(r'(\d{1,3}[.,]\d{2})', clean_line)
+                matches = re.findall(r'(\d{1,5}[.,]\d{2})', clean_line)
                 if matches:
-                    amount = float(matches[-1].replace(",", ""))
-                    print(f">>> TOTAL FLEX: ₹{amount} from line: {line}")
+                    amount = float(matches[-1].replace(",", ""))  # Always pick the last match
+                    print(f">>> TOTAL FLEX (last match): ₹{amount} from line: {line}")
                     break
 
-    # Strict date extraction: Only extract if present, never auto-generate
+    # Strict date extraction: Try multiple formats
     date_str = None
+    # 1. dd/mm/yyyy
     date_match = re.search(r'(\d{2}/\d{2}/\d{4})', text)
     if date_match:
         date_str = date_match.group(1)
-
+    # 2. dd-mm-yyyy
+    if not date_str:
+        date_match = re.search(r'(\d{2}-\d{2}-\d{4})', text)
+        if date_match:
+            date_str = date_match.group(1)
+    # 3. Month dd, yyyy (with or without weekday)
+    if not date_str:
+        date_match = re.search(r'([A-Za-z]+\s+\d{1,2},\s*\d{4})', text)
+        if date_match:
+            # Try to parse this format
+            try:
+                dt = datetime.strptime(date_match.group(1), "%B %d, %Y")
+                date_str = dt.strftime("%d-%m-%Y")
+            except Exception:
+                pass
+    # 4. Weekday, Month dd, yyyy (e.g., Sunday, January 25, 2026)
+    if not date_str:
+        date_match = re.search(r'([A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2},\s*\d{4})', text)
+        if date_match:
+            try:
+                dt = datetime.strptime(date_match.group(1), "%A, %B %d, %Y")
+                date_str = dt.strftime("%d-%m-%Y")
+            except Exception:
+                pass
     # Description: Use first non-empty line
     vendor = "Receipt"
     for line in lines:
