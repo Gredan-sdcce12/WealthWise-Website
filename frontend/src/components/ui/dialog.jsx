@@ -30,7 +30,7 @@ const DialogContent = React.forwardRef(({ className, children, ...props }, ref) 
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 bg-gray-50 p-6 border border-gray-200 rounded-lg", // Subtle contrast background
+        "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 bg-gray-100 p-6 border border-gray-300 rounded-lg", // Increased contrast background for all dialogs
         className,
       )}
       {...props}
