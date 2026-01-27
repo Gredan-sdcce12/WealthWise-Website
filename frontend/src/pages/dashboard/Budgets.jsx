@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -324,11 +325,17 @@ export default function Budgets() {
   };
 
   // Handle delete budget
-  const handleDelete = async (id) => {
+  // Confirmation dialog state for delete
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const handleDelete = (id) => {
+    setConfirmDeleteId(id);
+  };
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return;
     try {
       setIsLoading(true);
-      await api.deleteBudget(id);
-      setBudgets((prev) => prev.filter((b) => b.id !== id));
+      await api.deleteBudget(confirmDeleteId);
+      setBudgets((prev) => prev.filter((b) => b.id !== confirmDeleteId));
       toast({ 
         title: "Budget removed", 
         description: "The category has been deleted.", 
@@ -342,6 +349,7 @@ export default function Budgets() {
       });
     } finally {
       setIsLoading(false);
+      setConfirmDeleteId(null);
     }
   };
 
@@ -625,6 +633,19 @@ export default function Budgets() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
+                          {/* Confirm Delete Dialog */}
+                          <Dialog open={!!confirmDeleteId} onOpenChange={open => { if (!open) setConfirmDeleteId(null); }}>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Delete Budget?</DialogTitle>
+                              </DialogHeader>
+                              <p>Are you sure you want to delete this budget? This action cannot be undone.</p>
+                              <div className="flex justify-end gap-2 mt-4">
+                                <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                                <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                     </div>
                   </div>
 

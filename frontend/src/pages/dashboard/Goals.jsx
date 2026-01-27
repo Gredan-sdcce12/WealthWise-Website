@@ -178,24 +178,26 @@ export default function Goals() {
     }
   };
 
-  const handleDeleteGoal = async (goalId) => {
+  // Confirmation dialog state for delete
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const handleDeleteGoal = async () => {
+    if (!confirmDeleteId) return;
     try {
-      await api.deleteGoal(goalId);
-      
+      await api.deleteGoal(confirmDeleteId);
       // Refresh goals to update available balance
       const data = await api.getGoals();
       const allGoals = data.goals || [];
       const now = new Date();
       const active = allGoals.filter(g => new Date(g.deadline) > now && g.current_amount < g.target_amount);
       const completed = allGoals.filter(g => g.current_amount >= g.target_amount);
-      
       setActiveGoals(active);
       setCompletedGoals(completed);
       setAvailableBalance(data.available_balance || 0);
-      
       toast({ title: "Goal deleted", description: "Goal removed and balance freed up!" });
     } catch (error) {
       toast({ title: "Error deleting goal", description: error.message, variant: "destructive" });
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
@@ -419,14 +421,23 @@ export default function Goals() {
                             variant="outline"
                             size="sm"
                             className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              if (window.confirm(`Delete "${goal.name}"? This can't be undone.`)) {
-                                handleDeleteGoal(goal.id);
-                              }
-                            }}
+                            onClick={() => setConfirmDeleteId(goal.id)}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
+                              {/* Confirm Delete Dialog (render once, outside map) */}
+                              <Dialog open={!!confirmDeleteId} onOpenChange={open => { if (!open) setConfirmDeleteId(null); }}>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Delete Goal?</DialogTitle>
+                                  </DialogHeader>
+                                  <p>Are you sure you want to delete this goal? This action cannot be undone.</p>
+                                  <div className="flex justify-end gap-2 mt-4">
+                                    <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                                    <Button variant="destructive" onClick={handleDeleteGoal}>Delete</Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                         </div>
                       </div>
                     </CardContent>

@@ -377,23 +377,37 @@ export default function Transactions() {
     }
   };
 
+
+  // Confirmation dialog state
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  // Remove undo state
+
   const handleDelete = (id) => {
-    deleteTransaction(id);
+    setConfirmDeleteId(id);
   };
 
-  const deleteTransaction = async (id) => {
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return;
     try {
-      await api.deleteTransaction(id);
-      toast({ title: "Deleted", description: "Transaction removed" });
-      
-      // Refresh data
+      await api.deleteTransaction(confirmDeleteId);
+      toast({
+        title: "Deleted",
+        description: "Transaction removed",
+        duration: 4000
+      });
       fetchTransactions();
       fetchSummary();
     } catch (error) {
       console.error('Failed to delete transaction:', error);
       toast({ title: "Error", description: error.message || "Failed to delete transaction", variant: "destructive" });
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
+
+  // Undo logic removed
+
+  // deleteTransaction is now handled by confirmDelete
 
   const handleEdit = (transaction) => {
     setFormData({
@@ -735,6 +749,19 @@ export default function Transactions() {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                            {/* Confirm Delete Dialog */}
+                            <Dialog open={!!confirmDeleteId} onOpenChange={open => { if (!open) setConfirmDeleteId(null); }}>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Delete Transaction?</DialogTitle>
+                                </DialogHeader>
+                                <p>Are you sure you want to delete this transaction? This action cannot be undone.</p>
+                                <div className="flex justify-end gap-2 mt-4">
+                                  <Button variant="outline" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+                                  <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                       </td>
                     </tr>
                   ))}
