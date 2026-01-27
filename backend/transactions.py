@@ -340,7 +340,53 @@ def _row_to_transaction(row):
     }
 
 
+
 # --- Routes ------------------------------------------------------------------
+
+# Update transaction endpoint
+from fastapi import Body
+
+@router.put("/{txn_id}")
+def update_transaction(
+    txn_id: int,
+    payload: dict = Body(...),
+    user_id: str = Depends(get_current_user_id)
+):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE transactions
+                SET amount = %s,
+                    category = %s,
+                    description = %s,
+                    payment_mode = %s,
+                    txn_date = %s,
+                    updated_at = NOW()
+                WHERE id = %s AND user_id = %s
+                RETURNING id, user_id, amount, txn_type, category, description, payment_mode, txn_date, month, year, source, created_at, updated_at;
+                """,
+                (
+                    payload.get("amount"),
+                    payload.get("category"),
+                    payload.get("description"),
+                    payload.get("payment_mode"),
+                    payload.get("txn_date"),
+                    txn_id,
+                    user_id,
+                ),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Transaction not found")
+            conn.commit()
+            return _row_to_transaction(row)
+    except Exception as exc:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update transaction: {exc}") from exc
+    finally:
+        conn.close()
 
 
 @router.post("/")
