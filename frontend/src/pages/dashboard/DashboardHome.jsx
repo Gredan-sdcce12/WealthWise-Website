@@ -16,8 +16,8 @@ import {
   BarChart3,
 } from "lucide-react";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -39,38 +39,33 @@ const API_BASE = "http://127.0.0.1:8000";
 
 
 
-const spendingData = [
-  { month: "Jan", income: 4200, expenses: 2800 },
-  { month: "Feb", income: 4500, expenses: 3100 },
-  { month: "Mar", income: 4100, expenses: 2900 },
-  { month: "Apr", income: 4800, expenses: 3200 },
-  { month: "May", income: 5200, expenses: 3400 },
-  { month: "Jun", income: 4900, expenses: 2800 },
+
+// --- Dashboard Data State ---
+const COLORS = [
+  "#10b981", // green
+  "#f59e42", // yellow
+  "#3b82f6", // blue
+  "#a78bfa", // purple
+  "#f87171", // red
+  "#6b7280", // gray
 ];
 
-const categoryData = [
-  { name: "Housing", value: 1200, color: "hsl(160, 84%, 39%)" },
-  { name: "Food", value: 600, color: "hsl(45, 93%, 47%)" },
-  { name: "Transport", value: 400, color: "hsl(200, 84%, 50%)" },
-  { name: "Shopping", value: 350, color: "hsl(280, 84%, 50%)" },
-  { name: "Other", value: 250, color: "hsl(0, 0%, 60%)" },
-];
-
-const recentTransactions = [
-  { id: 1, title: "Salary Deposit", amount: 5200, type: "income", date: "Today", category: "Income" },
-  { id: 2, title: "Grocery Store", amount: -89.5, type: "expense", date: "Today", category: "Food" },
-  { id: 3, title: "Netflix Subscription", amount: -15.99, type: "expense", date: "Yesterday", category: "Entertainment" },
-  { id: 4, title: "Gas Station", amount: -45.0, type: "expense", date: "Yesterday", category: "Transport" },
-  { id: 5, title: "Freelance Payment", amount: 850, type: "income", date: "Dec 1", category: "Income" },
-];
-
-const upcomingBills = [
-  { id: 1, title: "Rent Payment", amount: 1500, dueDate: "Dec 5", status: "upcoming" },
-  { id: 2, title: "Electric Bill", amount: 120, dueDate: "Dec 8", status: "upcoming" },
-  { id: 3, title: "Internet", amount: 79.99, dueDate: "Dec 10", status: "upcoming" },
-];
+function getMonthYear() {
+  const now = new Date();
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
+}
 
 export default function DashboardHome() {
+  // Dashboard data state (hooks must be inside the component)
+  const [cashFlow, setCashFlow] = useState({ income: 0, expenses: 0 });
+  const [categoryData, setCategoryData] = useState([]);
+  const [budgets, setBudgets] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
+  const [showIncomePrompt, setShowIncomePrompt] = useState(false);
+
+  // --- Fetch Monthly Cash Flow (income, expenses, savings) ---
   const outletCtx = useOutletContext?.() || {};
   const {
     latestIncome: sharedIncome,
@@ -83,169 +78,168 @@ export default function DashboardHome() {
     refreshKey,
   } = outletCtx;
 
-  const [latestIncome, setLatestIncome] = useState(null);
-  const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
-  const [isLoadingMonthlyTotal, setIsLoadingMonthlyTotal] = useState(true);
-  const [monthlyExpenses, setMonthlyExpenses] = useState(2847);
-  const [availableBalance, setAvailableBalance] = useState(0);
-  const [showIncomePrompt, setShowIncomePrompt] = useState(false);
-  const [allowUsePrevious, setAllowUsePrevious] = useState(false);
+  // Fallbacks for missing context values
+  const latestIncome = sharedIncome || {};
+  const allowUsePrevious = sharedAllowUsePrevious || false;
+  const isLoadingMonthlyTotal = sharedLoadingMonthlyIncome || false;
+
+  // Calculate available balance and monthly expenses
+  const monthlyExpenses = cashFlow.expenses || 0;
+  const availableBalance = (cashFlow.income || 0) - (cashFlow.expenses || 0);
 
   useEffect(() => {
-    let active = true;
-
-    if (sharedIncome) {
-      setLatestIncome(sharedIncome);
-      setAllowUsePrevious(true);
-      return () => {
-        active = false;
-      };
-    }
-
-    const fetchLatestIncome = async () => {
+    const { month, year } = getMonthYear();
+    async function fetchCashFlow() {
       try {
-        const body = await api.getLatestIncome();
-        const hasIncome = body?.amount !== null && body?.amount !== undefined;
-        if (hasIncome) {
-          setLatestIncome(body);
-          setAllowUsePrevious(true);
-        }
-        setShowIncomePrompt(true);
-      } catch (err) {
-        console.warn("Unable to load income", err);
-        setShowIncomePrompt(true);
-      }
-    };
-
-    fetchLatestIncome();
-    return () => {
-      active = false;
-    };
-  }, [sharedIncome]);
-
-  useEffect(() => {
-    let active = true;
-
-    if (sharedMonthlyIncomeTotal !== undefined && sharedMonthlyIncomeTotal !== null) {
-      setMonthlyIncomeTotal(sharedMonthlyIncomeTotal);
-      setIsLoadingMonthlyTotal(Boolean(sharedLoadingMonthlyIncome));
-      return () => {
-        active = false;
-      };
-    }
-
-    const fetchMonthlyIncomeTotal = async () => {
-      try {
-        const now = new Date();
-        const body = await api.getIncomeTotal(now.getMonth() + 1, now.getFullYear());
-        setMonthlyIncomeTotal(typeof body.total === "number" ? body.total : 0);
-      } catch (err) {
-        console.warn("Unable to load monthly income total", err);
-      } finally {
-        if (active) setIsLoadingMonthlyTotal(false);
-      }
-    };
-
-    fetchMonthlyIncomeTotal();
-    return () => {
-      active = false;
-    };
-  }, [sharedLoadingMonthlyIncome, sharedMonthlyIncomeTotal]);
-
-  // Fetch monthly expenses and goals total with polling
-  useEffect(() => {
-    console.log("[DashboardHome] refreshKey changed:", refreshKey);
-    let active = true;
-    let pollInterval;
-
-    const fetchExpensesAndGoals = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!active) return;
-        const token = data?.session?.access_token || "test_user_123"; // Fallback for dev
-        
-        // Get current month
-        const now = new Date();
-        const month = now.getMonth() + 1;
-        const year = now.getFullYear();
-
-        // Fetch monthly expenses
-        const expRes = await fetch(`${API_BASE}/transactions/summary?month=${month}&year=${year}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const [incomeRes, expenseRes] = await Promise.all([
+          api.getIncomeTotal(month, year),
+          api.getTransactionSummary(month, year),
+        ]);
+        setCashFlow({
+          income: incomeRes.total || 0,
+          expenses: expenseRes.total_expense || 0,
         });
-        if (expRes.ok) {
-          const expData = await expRes.json();
-          setMonthlyExpenses(expData.total_expense || 0);
-        }
-
-        // Fetch goals total amount
-        const goalsRes = await fetch(`${API_BASE}/goals`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (goalsRes.ok) {
-          const goalsResponse = await goalsRes.json();
-          // Use available_balance from backend instead of calculating frontend
-          const newBalance = goalsResponse.available_balance || 0;
-          console.log("[DashboardHome] Updated available balance:", newBalance);
-          setAvailableBalance(newBalance);
-        }
-      } catch (err) {
-        console.warn("Unable to load expenses or goals", err);
+      } catch (e) {
+        setCashFlow({ income: 0, expenses: 0 });
       }
-    };
-
-    fetchExpensesAndGoals();
-    
-    // Polling: refetch every 5 seconds to catch updates from other pages (reduced frequency to prevent blinking)
-    pollInterval = setInterval(fetchExpensesAndGoals, 5000);
-    
-    return () => {
-      active = false;
-      if (pollInterval) clearInterval(pollInterval);
-    };
+    }
+    fetchCashFlow();
   }, [refreshKey]);
 
-  // Expose fetchExpensesAndGoals for manual refresh
-  const handleRefreshData = () => {
-    // Re-trigger the effect by forcing a re-render
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
-    
-    supabase.auth.getSession().then(({ data }) => {
-      const token = data?.session?.access_token || "test_user_123";
-      
-      fetch(`${API_BASE}/transactions/summary?month=${month}&year=${year}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(res => res.ok ? res.json() : null)
-        .then(expData => {
-          if (expData) setMonthlyExpenses(expData.total_expense || 0);
-        });
-      
-      fetch(`${API_BASE}/goals`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(res => res.ok ? res.json() : null)
-        .then(goalsResponse => {
-          if (goalsResponse) {
-            setAvailableBalance(goalsResponse.available_balance || 0);
-          }
-        });
-    });
+  // --- Fetch Top 5 Spending Categories ---
+  // Category normalization map
+  const CATEGORY_MAP = {
+    food: "Food",
+    groceries: "Food",
+    restaurant: "Food",
+    transport: "Transport",
+    transportation: "Transport",
+    healthcare: "Healthcare",
+    health: "Healthcare",
+    shopping: "Shopping",
+    clothes: "Shopping",
+    clothing: "Shopping",
+    entertainment: "Entertainment",
+    bills: "Bills",
+    utilities: "Bills",
+    others: "Others",
+    misc: "Miscellaneous",
+    miscellaneous: "Miscellaneous",
+    uncategorized: "Miscellaneous",
   };
+
+  function normalizeCategory(name) {
+    if (!name) return "Miscellaneous";
+    const key = name.trim().toLowerCase();
+    return CATEGORY_MAP[key] || name;
+  }
+
+  useEffect(() => {
+    const { month, year } = getMonthYear();
+    async function fetchCategories() {
+      try {
+        const summary = await api.getTransactionSummary(month, year);
+        const cats = summary.expenses_by_category || {};
+        // Convert to array, normalize, group, and sum values
+        const grouped = {};
+        Object.entries(cats).forEach(([name, value]) => {
+          const norm = normalizeCategory(name);
+          grouped[norm] = (grouped[norm] || 0) + value;
+        });
+        let arr = Object.entries(grouped)
+          .map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
+        // Move 'Miscellaneous' to the end
+        arr = arr.sort((a, b) => {
+          if (a.name === "Miscellaneous") return 1;
+          if (b.name === "Miscellaneous") return -1;
+          return b.value - a.value;
+        });
+        // Take top 5 (excluding Miscellaneous if more than 5)
+        if (arr.length > 5) {
+          const misc = arr.find(a => a.name === "Miscellaneous");
+          arr = arr.filter(a => a.name !== "Miscellaneous").slice(0, 5);
+          if (misc) arr.push(misc);
+        }
+        setCategoryData(arr);
+      } catch (e) {
+        setCategoryData([]);
+      }
+    }
+    fetchCategories();
+  }, [refreshKey]);
+
+  // --- Fetch Budgets for Budget Usage Overview ---
+  useEffect(() => {
+    const { month, year } = getMonthYear();
+    async function fetchBudgets() {
+      try {
+        const data = await api.getBudgets({ month, year });
+        console.log('[Dashboard] Budgets fetched:', data);
+        setBudgets(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setBudgets([]);
+      }
+    }
+    fetchBudgets();
+  }, [refreshKey]);
+
+  // --- Fetch Top 2 Active Goals ---
+  useEffect(() => {
+    async function fetchGoals() {
+      try {
+        const data = await api.getGoals();
+        const all = data.goals || [];
+        // Only active goals, sort by progress
+        const active = all.filter(g => g.current_amount < g.target_amount)
+          .sort((a, b) => ((b.current_amount / b.target_amount) - (a.current_amount / a.target_amount)));
+        setGoals(active.slice(0, 2));
+      } catch (e) {
+        setGoals([]);
+      }
+    }
+    fetchGoals();
+  }, [refreshKey]);
+
+  // --- Fetch Last 5 Transactions ---
+  useEffect(() => {
+    async function fetchRecent() {
+      try {
+        const txns = await api.getTransactions({ limit: 5, ordering: "-txn_date" });
+        setRecentTransactions(Array.isArray(txns) ? txns : []);
+      } catch (e) {
+        setRecentTransactions([]);
+      }
+    }
+    fetchRecent();
+  }, [refreshKey]);
+
+
+const upcomingBills = [
+  { id: 1, title: "Rent Payment", amount: 1500, dueDate: "Dec 5", status: "upcoming" },
+  { id: 2, title: "Electric Bill", amount: 120, dueDate: "Dec 8", status: "upcoming" },
+  { id: 3, title: "Internet", amount: 79.99, dueDate: "Dec 10", status: "upcoming" },
+];
 
   const incomeAmount = sharedMonthlyIncomeTotal ?? monthlyIncomeTotal ?? 0;
   const incomeType = latestIncome?.income_type ?? "monthly";
   const loadingIncome = sharedLoadingMonthlyIncome ?? isLoadingMonthlyTotal;
+
+  // Dynamic greeting based on time of day
+  function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  }
+  const greeting = getGreeting();
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold">Good morning, John! 👋</h1>
-          <p className="text-muted-foreground">Here's your financial overview for today.</p>
+          <h1 className="text-3xl font-bold">{greeting}, John! 👋</h1>
+          <p className="text-muted-foreground">Here is your financial overview for today.</p>
         </div>
         <Button 
           variant="hero" 
@@ -254,7 +248,7 @@ export default function DashboardHome() {
           onClick={() => setShowIncomePrompt(true)}
         >
           <ArrowUpRight className="w-4 h-4" />
-          Add income
+          Add Income
         </Button>
         
         <AddIncomeDialog
@@ -282,7 +276,7 @@ export default function DashboardHome() {
                 <p className="text-xs text-muted-foreground font-medium">Available Balance</p>
                 <p className="text-2xl font-bold mt-1">₹{Math.max(0, availableBalance).toLocaleString()}</p>
               </div>
-              <p className="text-xs text-muted-foreground">After expenses & goals</p>
+              <p className="text-xs text-muted-foreground">After expenses & active goals</p>
             </div>
           </CardContent>
         </Card>
@@ -300,7 +294,7 @@ export default function DashboardHome() {
                   {loadingIncome ? "..." : `₹${incomeAmount.toLocaleString()}`}
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">{incomeType}</p>
+              <p className="text-xs text-muted-foreground">For current month</p>
             </div>
           </CardContent>
         </Card>
@@ -338,56 +332,37 @@ export default function DashboardHome() {
         </Card>
       </div>
 
-      {/* Charts Section */}
+      {/* --- Dashboard Visualizations --- */}
       <div className="grid gap-6 lg:grid-cols-3">
+        {/* 1. Monthly Cash Flow Chart */}
         <Card variant="elevated" className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Income vs Expenses</CardTitle>
+            <CardTitle>Monthly Cash Flow</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={spendingData}>
-                  <defs>
-                    <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(0, 84%, 60%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(0, 84%, 60%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" className="text-xs" />
+                <BarChart data={[{
+                  name: "This Month",
+                  Income: cashFlow.income,
+                  Expenses: cashFlow.expenses,
+                  Savings: Math.max(0, cashFlow.income - cashFlow.expenses),
+                }]}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" className="text-xs" />
                   <YAxis className="text-xs" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="income"
-                    stroke="hsl(160, 84%, 39%)"
-                    strokeWidth={2}
-                    fill="url(#incomeGradient)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="expenses"
-                    stroke="hsl(0, 84%, 60%)"
-                    strokeWidth={2}
-                    fill="url(#expenseGradient)"
-                  />
-                </AreaChart>
+                  <Tooltip />
+                  <Bar dataKey="Income" fill="#10b981" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Expenses" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Savings" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
+        {/* 2. Spending by Category */}
         <Card variant="elevated">
           <CardHeader>
             <CardTitle>Spending by Category</CardTitle>
@@ -409,13 +384,7 @@ export default function DashboardHome() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
+                  <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -426,7 +395,7 @@ export default function DashboardHome() {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
                     <span className="text-muted-foreground">{category.name}</span>
                   </div>
-                  <span className="font-medium">₹{category.value}</span>
+                  <span className="font-medium">₹{category.value.toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -434,71 +403,177 @@ export default function DashboardHome() {
         </Card>
       </div>
 
-      {/* Recent Activity & Upcoming */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card variant="elevated">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Transactions</CardTitle>
-            <Button variant="ghost" size="sm">View All</Button>
-          </CardHeader>
-          <CardContent>
+      {/* 3. Budget Usage Overview */}
+      <Card variant="elevated">
+        <CardHeader>
+          <CardTitle>Budget Usage Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {budgets.length === 0 ? (
+            <div className="text-muted-foreground text-sm">No budgets set for this month.</div>
+          ) : (
             <div className="space-y-4">
-              {recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      transaction.type === "income" ? "bg-emerald-100" : "bg-destructive/10"
-                    }`}>
-                      {transaction.type === "income" ? (
-                        <ArrowUpRight className="w-5 h-5 text-emerald-600" />
-                      ) : (
-                        <ArrowDownRight className="w-5 h-5 text-destructive" />
-                      )}
+              {(() => {
+                // Remove duplicate 'Others' categories (case-insensitive)
+                const seen = new Set();
+                return budgets.filter(b => {
+                  // Remove duplicate 'Others' categories (case-insensitive)
+                  const label = (b.custom_category_name || b.category || '').trim().toLowerCase();
+                  if (label === 'others') {
+                    if (seen.has('others')) return false;
+                    seen.add('others');
+                  }
+                  return true;
+                }).map((b, i) => {
+                  const spent = typeof b.spent === 'number' ? b.spent : 0;
+                  // Use 'amount' as the budget limit, matching backend and Budgets.jsx
+                  const budgetLimit = typeof b.amount === 'number' ? b.amount : 0;
+                  // Show label: custom_category_name for 'others', else category
+                  const label = b.category === 'others' ? (b.custom_category_name || 'Others') : b.category;
+                  if (budgetLimit === 0) {
+                    return (
+                      <div key={b.id || label} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="truncate font-medium">{label}</span>
+                          <span className="font-mono text-muted-foreground">No budget set</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Spent: ₹{spent.toLocaleString()}</span>
+                          <span>Limit: ₹0</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  const percent = (spent / budgetLimit) * 100;
+                  let color = "bg-emerald-500";
+                  if (percent >= 90) color = "bg-red-500";
+                  else if (percent >= 70) color = "bg-yellow-400";
+                  return (
+                    <div key={b.id || label} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="truncate font-medium">{label}</span>
+                        <span className="font-mono">{percent.toFixed(0)}%</span>
+                      </div>
+                      <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                        <div className={color + " h-full transition-all"} style={{ width: `${Math.min(percent, 100)}%` }} />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Spent: ₹{spent.toLocaleString()}</span>
+                        <span>Limit: ₹{budgetLimit.toLocaleString()}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{transaction.title}</p>
-                      <p className="text-sm text-muted-foreground">{transaction.date} • {transaction.category}</p>
-                    </div>
-                  </div>
-                  <span className={`font-semibold ${
-                    transaction.type === "income" ? "text-emerald-600" : "text-destructive"
-                  }`}>
-                    {transaction.type === "income" ? "+" : ""}₹{Math.abs(transaction.amount).toFixed(2)}
-                  </span>
-                </div>
-              ))}
+                  );
+                });
+              })()}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
 
-        <Card variant="elevated">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Upcoming Bills</CardTitle>
-            <Button variant="ghost" size="sm">View All</Button>
-          </CardHeader>
-          <CardContent>
+      {/* 4. Goals Snapshot */}
+      <Card variant="elevated">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Goals Snapshot</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => window.location.href = "/dashboard/goals"}>View All Goals</Button>
+        </CardHeader>
+        <CardContent>
+          {goals.length === 0 ? (
+            <div className="text-muted-foreground text-sm">No active goals.</div>
+          ) : goals.length === 1 ? (
+            <>
+              <div className="space-y-4">
+                {goals.map((g) => {
+                  const percent = g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0;
+                  return (
+                    <div key={g.id} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium truncate">{g.name}</span>
+                        <span className="font-mono">{percent.toFixed(0)}%</span>
+                      </div>
+                      <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                        <div className="bg-blue-500 h-full transition-all" style={{ width: `${Math.min(percent, 100)}%` }} />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Saved: ₹{g.current_amount.toLocaleString()}</span>
+                        <span>Target: ₹{g.target_amount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="text-muted-foreground text-xs mt-2">Only 1 active goal</div>
+            </>
+          ) : (
             <div className="space-y-4">
-              {upcomingBills.map((bill) => (
-                <div key={bill.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/30 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-accent-foreground" />
+              {goals.slice(0, 2).map((g) => {
+                const percent = g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0;
+                return (
+                  <div key={g.id} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium truncate">{g.name}</span>
+                      <span className="font-mono">{percent.toFixed(0)}%</span>
                     </div>
-                    <div>
-                      <p className="font-medium">{bill.title}</p>
-                      <p className="text-sm text-muted-foreground">Due {bill.dueDate}</p>
+                    <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                      <div className="bg-blue-500 h-full transition-all" style={{ width: `${Math.min(percent, 100)}%` }} />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Saved: ₹{g.current_amount.toLocaleString()}</span>
+                      <span>Target: ₹{g.target_amount.toLocaleString()}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-semibold">₹{bill.amount.toFixed(2)}</span>
-                    <Button variant="outline" size="sm" className="ml-3">Pay</Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 5. Recent Transactions Preview */}
+      <Card variant="elevated">
+        <CardHeader>
+          <CardTitle>Recent Transactions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentTransactions.length === 0 ? (
+            <div className="text-muted-foreground text-sm">No recent transactions.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="py-2 px-2 text-left">Date</th>
+                    <th className="py-2 px-2 text-left">Category</th>
+                    <th className="py-2 px-2 text-left">Note</th>
+                    <th className="py-2 px-2 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentTransactions.map((t) => {
+                    // Format date as '15 Feb 2026'
+                    const dateObj = new Date(t.txn_date || t.date);
+                    const day = dateObj.getDate();
+                    const month = dateObj.toLocaleString('en-US', { month: 'short' });
+                    const year = dateObj.getFullYear();
+                    const formattedDate = `${day} ${month} ${year}`;
+                    // Prefer description, then title, then empty string
+                    const note = t.description || t.title || '';
+                    return (
+                      <tr key={t.id} className="border-b hover:bg-muted/50">
+                        <td className="py-2 px-2">{formattedDate}</td>
+                        <td className="py-2 px-2">{t.category || t.category_label}</td>
+                        <td className="py-2 px-2">{note}</td>
+                        <td className={"py-2 px-2 text-right font-semibold " + (t.txn_type === "income" || t.type === "income" ? "text-emerald-600" : "text-destructive")}>{t.txn_type === "income" || t.type === "income" ? "+" : "-"}₹{Math.abs(t.amount).toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ...removed duplicate Recent Transactions and Upcoming Bills sections for a cleaner dashboard... */}
 
     </div>
   );
