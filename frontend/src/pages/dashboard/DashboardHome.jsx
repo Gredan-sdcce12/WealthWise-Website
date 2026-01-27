@@ -78,9 +78,29 @@ export default function DashboardHome() {
     refreshKey,
   } = outletCtx;
 
+  // --- Ensure previous income is always available for AddIncomeDialog ---
+  const [localLastIncome, setLocalLastIncome] = useState(null);
+  useEffect(() => {
+    if (!sharedIncome) {
+      // Try to fetch from localStorage as fallback
+      const stored = localStorage.getItem("ww:last-income");
+      if (stored) {
+        try {
+          setLocalLastIncome(JSON.parse(stored));
+        } catch {}
+      }
+    } else {
+      setLocalLastIncome(null); // clear fallback if context provides
+    }
+  }, [sharedIncome, showIncomePrompt]);
+
+
+  const previousIncome = sharedIncome || localLastIncome;
+  // Only declare allowUsePrevious once
+  const allowUsePrevious = Boolean(sharedAllowUsePrevious) || Boolean(previousIncome);
+
   // Fallbacks for missing context values
   const latestIncome = sharedIncome || {};
-  const allowUsePrevious = sharedAllowUsePrevious || false;
   const isLoadingMonthlyTotal = sharedLoadingMonthlyIncome || false;
 
   // Calculate available balance and monthly expenses
@@ -254,10 +274,9 @@ const upcomingBills = [
         <AddIncomeDialog
           open={showIncomePrompt}
           onOpenChange={setShowIncomePrompt}
-          allowUsePrevious={allowUsePrevious || Boolean(sharedAllowUsePrevious)}
+          allowUsePrevious={allowUsePrevious}
           onSubmit={sharedSaveIncome}
-          onUsePrevious={allowUsePrevious || sharedAllowUsePrevious ? sharedCopyIncome : undefined}
-          previousIncome={sharedIncome || latestIncome}
+          previousIncome={previousIncome}
           loading={Boolean(sharedSaving)}
           showTrigger={false}
         />
