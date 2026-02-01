@@ -58,11 +58,12 @@ export default function Transactions() {
   const fileInputRef = useRef(null);
 
   // Filter states
-  const [selectedMonth, setSelectedMonth] = useState("2026-01");
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1); // 1-12
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterPaymentMode, setFilterPaymentMode] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateRange, setDateRange] = useState({ start: "", end: "" });
 
   // Get current user and load transactions
   useEffect(() => {
@@ -95,15 +96,14 @@ export default function Transactions() {
       
       return () => clearInterval(pollInterval);
     }
-  }, [userId, selectedMonth, filterCategory, filterPaymentMode, searchQuery]);
+  }, [userId, selectedMonth, selectedYear, filterCategory, filterPaymentMode, searchQuery]);
 
   const fetchIncomeTotal = async () => {
     try {
-      const [year, month] = selectedMonth.split('-');
       const { data } = await supabase.auth.getSession();
       const token = data?.session?.access_token || "test_user_123"; // Fallback for dev
 
-      const res = await fetch(`http://127.0.0.1:8000/income/total?month=${month}&year=${year}`, {
+      const res = await fetch(`http://127.0.0.1:8000/income/total?month=${selectedMonth}&year=${selectedYear}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -117,8 +117,7 @@ export default function Transactions() {
 
   const fetchBudgets = async () => {
     try {
-      const [year, month] = selectedMonth.split('-');
-      const data = await api.getBudgets({ month: parseInt(month), year: parseInt(year) });
+      const data = await api.getBudgets({ month: selectedMonth, year: selectedYear });
       setBudgets(data || []);
     } catch (err) {
       console.warn("Unable to load budgets", err);
@@ -151,9 +150,9 @@ export default function Transactions() {
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      const [year, month] = selectedMonth.split('-');
-      const startDate = `${year}-${month}-01`;
-      const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0];
+      const month = String(selectedMonth).padStart(2, '0');
+      const startDate = `${selectedYear}-${month}-01`;
+      const endDate = new Date(selectedYear, selectedMonth, 0).toISOString().split('T')[0];
 
       const filters = {
         start_date: startDate,
@@ -197,8 +196,7 @@ export default function Transactions() {
 
   const fetchSummary = async () => {
     try {
-      const [year, month] = selectedMonth.split('-');
-      const data = await api.getTransactionSummary(parseInt(month), parseInt(year));
+      const data = await api.getTransactionSummary(selectedMonth, selectedYear);
       setSummary(data);
     } catch (error) {
       console.error('Failed to fetch summary:', error);
@@ -525,15 +523,34 @@ export default function Transactions() {
           <p className="text-muted-foreground mt-1">Track and manage your daily spending</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-40">
+          <Select value={String(selectedMonth)} onValueChange={(val) => setSelectedMonth(parseInt(val))}>
+            <SelectTrigger className="w-36">
               <Calendar className="w-4 h-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2025-12">Dec 2025</SelectItem>
-              <SelectItem value="2026-01">Jan 2026</SelectItem>
-              <SelectItem value="2026-02">Feb 2026</SelectItem>
+              <SelectItem value="1">January</SelectItem>
+              <SelectItem value="2">February</SelectItem>
+              <SelectItem value="3">March</SelectItem>
+              <SelectItem value="4">April</SelectItem>
+              <SelectItem value="5">May</SelectItem>
+              <SelectItem value="6">June</SelectItem>
+              <SelectItem value="7">July</SelectItem>
+              <SelectItem value="8">August</SelectItem>
+              <SelectItem value="9">September</SelectItem>
+              <SelectItem value="10">October</SelectItem>
+              <SelectItem value="11">November</SelectItem>
+              <SelectItem value="12">December</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(parseInt(val))}>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={String(now.getFullYear())}>{now.getFullYear()}</SelectItem>
+              <SelectItem value={String(now.getFullYear() - 1)}>{now.getFullYear() - 1}</SelectItem>
+              <SelectItem value={String(now.getFullYear() - 2)}>{now.getFullYear() - 2}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="hero" onClick={() => setShowAddDialog(true)}>
@@ -608,7 +625,7 @@ export default function Transactions() {
             <Filter className="w-5 h-5" />
             <h3 className="font-semibold">Filters</h3>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Search by note</Label>
               <Input
@@ -664,15 +681,6 @@ export default function Transactions() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Date Range</Label>
-              <Input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              />
             </div>
           </div>
         </CardContent>

@@ -49,7 +49,11 @@ export function DashboardLayout() {
         if (hasIncome) {
           setLatestIncome(body);
         }
-        await fetchMonthlyIncomeTotal(uid); // Fetch monthly income total
+        // Fetch current month's income total
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        await fetchMonthlyIncomeTotal(uid, currentMonth, currentYear);
       } catch (err) {
         toast({ title: "Unable to check income", description: err?.message || "Please try again." });
       }

@@ -42,18 +42,13 @@ const INITIAL_BUDGETS = [
   { id: 5, category: "entertainment", type: "Weekly", amount: 1500, spent: 1650, startDate: "2026-01-01", alertThreshold: 80 },
 ];
 
-const MONTH_OPTIONS = [
-  "January 2026",
-  "February 2026",
-  "March 2026",
-  "April 2026",
-];
-
 export default function Budgets() {
   // State management
+  const now = new Date();
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0]);
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1); // 1-12
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ amount: "", type: "Monthly", alertThreshold: "80" });
   const [formData, setFormData] = useState({
@@ -96,13 +91,8 @@ export default function Budgets() {
       }
       setError(null);
       try {
-        // Parse month/year from selectedMonth (e.g., "January 2026")
-        const [monthName, yearStr] = selectedMonth.split(" ");
-        const monthNum = new Date(`${monthName} 1, ${yearStr}`).getMonth() + 1;
-        const year = parseInt(yearStr);
-
         const [budgetsData, categoriesData] = await Promise.all([
-          api.getBudgets({ month: monthNum, year }),
+          api.getBudgets({ month: selectedMonth, year: selectedYear }),
           api.getCategories(),
         ]);
         
@@ -131,7 +121,7 @@ export default function Budgets() {
     return () => {
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [selectedMonth, userId]);
+  }, [selectedMonth, selectedYear, userId]);
 
   // TODO: Calculate spent from transactions when backend is ready
   // const calculateSpent = (budget, transactions) => {
@@ -213,13 +203,29 @@ export default function Budgets() {
   });
   const budgetsExceeded = budgets.filter((b) => b.spent > b.amount);
 
-  // Calculate days remaining in current month
+  // Calculate days remaining in selected month
   const getDaysRemaining = () => {
     const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const daysRemaining = daysInMonth - now.getDate();
-    const percentagePassed = ((now.getDate() / daysInMonth) * 100).toFixed(0);
+    const currentDate = now.getDate();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentYear = now.getFullYear();
+    
+    // Calculate for the selected month/year
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    
+    // If viewing a future month, show full days remaining
+    if (selectedYear > currentYear || (selectedYear === currentYear && selectedMonth > currentMonth)) {
+      return { daysRemaining: daysInMonth, percentagePassed: 0 };
+    }
+    
+    // If viewing a past month, show 0 days remaining, 100% passed
+    if (selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth)) {
+      return { daysRemaining: 0, percentagePassed: 100 };
+    }
+    
+    // If viewing current month, calculate based on today's date
+    const daysRemaining = daysInMonth - currentDate;
+    const percentagePassed = ((currentDate / daysInMonth) * 100).toFixed(0);
     return { daysRemaining, percentagePassed };
   };
 
@@ -418,18 +424,35 @@ export default function Budgets() {
           </div>
           <p className="text-muted-foreground">Set monthly limits and track your spending</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Label className="text-sm text-muted-foreground">Month</Label>
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select month" />
+        <div className="flex items-center gap-2">
+          <Select value={String(selectedMonth)} onValueChange={(val) => setSelectedMonth(parseInt(val))}>
+            <SelectTrigger className="w-36">
+              <Calendar className="w-4 h-4 mr-2" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {MONTH_OPTIONS.map((month) => (
-                <SelectItem key={month} value={month}>
-                  {month}
-                </SelectItem>
-              ))}
+              <SelectItem value="1">January</SelectItem>
+              <SelectItem value="2">February</SelectItem>
+              <SelectItem value="3">March</SelectItem>
+              <SelectItem value="4">April</SelectItem>
+              <SelectItem value="5">May</SelectItem>
+              <SelectItem value="6">June</SelectItem>
+              <SelectItem value="7">July</SelectItem>
+              <SelectItem value="8">August</SelectItem>
+              <SelectItem value="9">September</SelectItem>
+              <SelectItem value="10">October</SelectItem>
+              <SelectItem value="11">November</SelectItem>
+              <SelectItem value="12">December</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(parseInt(val))}>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={String(now.getFullYear())}>{now.getFullYear()}</SelectItem>
+              <SelectItem value={String(now.getFullYear() - 1)}>{now.getFullYear() - 1}</SelectItem>
+              <SelectItem value={String(now.getFullYear() - 2)}>{now.getFullYear() - 2}</SelectItem>
             </SelectContent>
           </Select>
         </div>

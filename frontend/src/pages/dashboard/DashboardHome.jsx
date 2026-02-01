@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   TrendingUp,
   TrendingDown,
   Wallet,
@@ -56,6 +63,11 @@ function getMonthYear() {
 }
 
 export default function DashboardHome() {
+  // Month/Year filter state - defaults to current month
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  
   // Dashboard data state (hooks must be inside the component)
   const [cashFlow, setCashFlow] = useState({ income: 0, expenses: 0 });
   const [categoryData, setCategoryData] = useState([]);
@@ -64,6 +76,7 @@ export default function DashboardHome() {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
   const [showIncomePrompt, setShowIncomePrompt] = useState(false);
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
 
   // --- Fetch Monthly Cash Flow (income, expenses, savings) ---
   const outletCtx = useOutletContext?.() || {};
@@ -77,6 +90,12 @@ export default function DashboardHome() {
     isLoadingIncomeTotal: sharedLoadingMonthlyIncome,
     refreshKey,
   } = outletCtx;
+
+  // Refresh dashboard data when navigating back to this page
+  useEffect(() => {
+    // Trigger refresh on mount
+    setLocalRefreshTrigger(prev => prev + 1);
+  }, []);
 
   // --- Ensure previous income is always available for AddIncomeDialog ---
   const [localLastIncome, setLocalLastIncome] = useState(null);
@@ -103,20 +122,85 @@ export default function DashboardHome() {
   const latestIncome = sharedIncome || {};
   const isLoadingMonthlyTotal = sharedLoadingMonthlyIncome || false;
 
+  // State for all-time totals
+  const [allTimeIncome, setAllTimeIncome] = useState(0);
+  const [allTimeExpenses, setAllTimeExpenses] = useState(0);
+  const [goalsSavings, setGoalsSavings] = useState(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [selectedMonthIncome, setSelectedMonthIncome] = useState(0);
+
   // Calculate available balance and monthly expenses
   const monthlyExpenses = cashFlow.expenses || 0;
-  const availableBalance = (cashFlow.income || 0) - (cashFlow.expenses || 0);
+  const incomeAmount = selectedMonthIncome; // Use selected month's income
+  // Available balance = ALL income - ALL expenses - money in active goals
+  const availableBalance = allTimeIncome - allTimeExpenses - goalsSavings;
+  
+  console.log('[Dashboard] Balance Calculation:', {
+    allTimeIncome,
+    allTimeExpenses,
+    goalsSavings,
+    availableBalance,
+    isLoadingBalance,
+    formula: `${allTimeIncome} - ${allTimeExpenses} - ${goalsSavings} = ${availableBalance}`
+  });
+
+  // Fetch all-time totals for available balance
+  useEffect(() => {
+    async function fetchAllTimeTotals() {
+      try {
+        console.log('[Dashboard] Fetching all-time totals...');
+        const [incomeRes, expenseRes, goalsRes] = await Promise.all([
+          api.getIncomeTotal(), // No month/year = all time
+          api.getTransactionSummary(), // No month/year = all time
+          api.getGoals()
+        ]);
+        console.log('[Dashboard] All-time income:', incomeRes);
+        console.log('[Dashboard] All-time expenses:', expenseRes);
+        console.log('[Dashboard] Goals:', goalsRes);
+        
+        setAllTimeIncome(incomeRes.total || 0);
+        setAllTimeExpenses(expenseRes.total_expense || 0);
+        // Sum up current_amount from all active goals
+        const activeGoals = goalsRes.goals || [];
+        const totalInGoals = activeGoals.reduce((sum, g) => sum + (g.current_amount || 0), 0);
+        setGoalsSavings(totalInGoals);
+        
+        console.log('=== DETAILED BREAKDOWN ===');
+        console.log('All-time Income Total:', incomeRes.total || 0);
+        console.log('All-time Expense Total:', expenseRes.total_expense || 0);
+        console.log('Total in Active Goals:', totalInGoals);
+        console.log('Available Balance =', (incomeRes.total || 0), '-', (expenseRes.total_expense || 0), '-', totalInGoals, '=', (incomeRes.total || 0) - (expenseRes.total_expense || 0) - totalInGoals);
+        console.log('========================');
+        
+        setIsLoadingBalance(false);
+      } catch (e) {
+        console.error('[Dashboard] Error fetching all-time totals:', e);
+        setIsLoadingBalance(false);
+      }
+    }
+    fetchAllTimeTotals();
+  }, [refreshKey, localRefreshTrigger]);
+
+  // Fetch selected month's income
+  useEffect(() => {
+    async function fetchMonthlyIncome() {
+      try {
+        const incomeRes = await api.getIncomeTotal(selectedMonth, selectedYear);
+        setSelectedMonthIncome(incomeRes.total || 0);
+      } catch (e) {
+        console.error('[Dashboard] Error fetching monthly income:', e);
+        setSelectedMonthIncome(0);
+      }
+    }
+    fetchMonthlyIncome();
+  }, [selectedMonth, selectedYear, refreshKey, localRefreshTrigger]);
 
   useEffect(() => {
-    const { month, year } = getMonthYear();
     async function fetchCashFlow() {
       try {
-        const [incomeRes, expenseRes] = await Promise.all([
-          api.getIncomeTotal(month, year),
-          api.getTransactionSummary(month, year),
-        ]);
+        const expenseRes = await api.getTransactionSummary(selectedMonth, selectedYear);
         setCashFlow({
-          income: incomeRes.total || 0,
+          income: 0, // We'll use income from the income table instead
           expenses: expenseRes.total_expense || 0,
         });
       } catch (e) {
@@ -124,7 +208,7 @@ export default function DashboardHome() {
       }
     }
     fetchCashFlow();
-  }, [refreshKey]);
+  }, [refreshKey, localRefreshTrigger, selectedMonth, selectedYear]);
 
   // --- Fetch Top 5 Spending Categories ---
   // Category normalization map
@@ -155,10 +239,9 @@ export default function DashboardHome() {
   }
 
   useEffect(() => {
-    const { month, year } = getMonthYear();
     async function fetchCategories() {
       try {
-        const summary = await api.getTransactionSummary(month, year);
+        const summary = await api.getTransactionSummary(selectedMonth, selectedYear);
         const cats = summary.expenses_by_category || {};
         // Convert to array, normalize, group, and sum values
         const grouped = {};
@@ -186,14 +269,13 @@ export default function DashboardHome() {
       }
     }
     fetchCategories();
-  }, [refreshKey]);
+  }, [refreshKey, localRefreshTrigger, selectedMonth, selectedYear]);
 
   // --- Fetch Budgets for Budget Usage Overview ---
   useEffect(() => {
-    const { month, year } = getMonthYear();
     async function fetchBudgets() {
       try {
-        const data = await api.getBudgets({ month, year });
+        const data = await api.getBudgets({ month: selectedMonth, year: selectedYear });
         console.log('[Dashboard] Budgets fetched:', data);
         setBudgets(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -201,7 +283,7 @@ export default function DashboardHome() {
       }
     }
     fetchBudgets();
-  }, [refreshKey]);
+  }, [refreshKey, localRefreshTrigger, selectedMonth, selectedYear]);
 
   // --- Fetch Top 2 Active Goals ---
   useEffect(() => {
@@ -218,20 +300,20 @@ export default function DashboardHome() {
       }
     }
     fetchGoals();
-  }, [refreshKey]);
+  }, [refreshKey, localRefreshTrigger]);
 
   // --- Fetch Last 5 Transactions ---
   useEffect(() => {
     async function fetchRecent() {
       try {
-        const txns = await api.getTransactions({ limit: 5, ordering: "-txn_date" });
+        const txns = await api.getTransactions({ limit: 5, ordering: "-txn_date", month: selectedMonth, year: selectedYear });
         setRecentTransactions(Array.isArray(txns) ? txns : []);
       } catch (e) {
         setRecentTransactions([]);
       }
     }
     fetchRecent();
-  }, [refreshKey]);
+  }, [refreshKey, localRefreshTrigger, selectedMonth, selectedYear]);
 
 
 const upcomingBills = [
@@ -240,7 +322,6 @@ const upcomingBills = [
   { id: 3, title: "Internet", amount: 79.99, dueDate: "Dec 10", status: "upcoming" },
 ];
 
-  const incomeAmount = sharedMonthlyIncomeTotal ?? monthlyIncomeTotal ?? 0;
   const incomeType = latestIncome?.income_type ?? "monthly";
   const loadingIncome = sharedLoadingMonthlyIncome ?? isLoadingMonthlyTotal;
 
@@ -252,6 +333,11 @@ const upcomingBills = [
     return "Good Evening";
   }
   const greeting = getGreeting();
+  
+  // Generate month options
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const currentYear = now.getFullYear();
+  const years = [currentYear, currentYear - 1, currentYear - 2]; // Current year and 2 previous
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -261,15 +347,50 @@ const upcomingBills = [
           <h1 className="text-3xl font-bold">{greeting}, John! 👋</h1>
           <p className="text-muted-foreground">Here is your financial overview for today.</p>
         </div>
-        <Button 
-          variant="hero" 
-          size="sm" 
-          className="flex items-center gap-2"
-          onClick={() => setShowIncomePrompt(true)}
-        >
-          <ArrowUpRight className="w-4 h-4" />
-          Add Income
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Month/Year Selector */}
+          <div className="flex items-center gap-2">
+            <Select value={String(selectedMonth)} onValueChange={(val) => setSelectedMonth(parseInt(val))}>
+              <SelectTrigger className="w-36">
+                <Calendar className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">January</SelectItem>
+                <SelectItem value="2">February</SelectItem>
+                <SelectItem value="3">March</SelectItem>
+                <SelectItem value="4">April</SelectItem>
+                <SelectItem value="5">May</SelectItem>
+                <SelectItem value="6">June</SelectItem>
+                <SelectItem value="7">July</SelectItem>
+                <SelectItem value="8">August</SelectItem>
+                <SelectItem value="9">September</SelectItem>
+                <SelectItem value="10">October</SelectItem>
+                <SelectItem value="11">November</SelectItem>
+                <SelectItem value="12">December</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(parseInt(val))}>
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={String(currentYear)}>{currentYear}</SelectItem>
+                <SelectItem value={String(currentYear - 1)}>{currentYear - 1}</SelectItem>
+                <SelectItem value={String(currentYear - 2)}>{currentYear - 2}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button 
+            variant="hero" 
+            size="sm" 
+            className="flex items-center gap-2"
+            onClick={() => setShowIncomePrompt(true)}
+          >
+            <ArrowUpRight className="w-4 h-4" />
+            Add Income
+          </Button>
+        </div>
         
         <AddIncomeDialog
           open={showIncomePrompt}
@@ -293,7 +414,9 @@ const upcomingBills = [
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Available Balance</p>
-                <p className="text-2xl font-bold mt-1">₹{Math.max(0, availableBalance).toLocaleString()}</p>
+                <p className="text-2xl font-bold mt-1">
+                  {isLoadingBalance ? "..." : `₹${Math.max(0, availableBalance).toLocaleString()}`}
+                </p>
               </div>
               <p className="text-xs text-muted-foreground">After expenses & active goals</p>
             </div>
@@ -363,9 +486,9 @@ const upcomingBills = [
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[{
                   name: "This Month",
-                  Income: cashFlow.income,
+                  Income: incomeAmount,
                   Expenses: cashFlow.expenses,
-                  Savings: Math.max(0, cashFlow.income - cashFlow.expenses),
+                  Savings: Math.max(0, incomeAmount - cashFlow.expenses),
                 }]}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
