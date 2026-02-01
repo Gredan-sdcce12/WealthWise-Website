@@ -188,58 +188,6 @@ def _guess_category(text: str) -> str:
             if keyword in text_lower:
                 return category
 
-@router.get("/summary")
-def transaction_summary(
-    month: int | None = None,
-    year: int | None = None,
-    user_id: str = Depends(get_current_user_id),
-):
-    current = datetime.utcnow()
-    month = month or current.month
-    year = year or current.year
-
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    COALESCE(SUM(CASE WHEN txn_type = 'expense' THEN amount END), 0) AS total_expense,
-                    COALESCE(SUM(CASE WHEN txn_type = 'income' THEN amount END), 0) AS total_income
-                FROM transactions
-                WHERE user_id = %s AND month = %s AND year = %s;
-                """,
-                (user_id, month, year),
-            )
-            totals_row = cur.fetchone()
-
-            cur.execute(
-                """
-                SELECT category, COALESCE(SUM(amount), 0) AS total
-                FROM transactions
-                WHERE user_id = %s AND txn_type = 'expense' AND month = %s AND year = %s
-                GROUP BY category
-                ORDER BY total DESC;
-                """,
-                (user_id, month, year),
-            )
-            category_rows = cur.fetchall()
-
-        return {
-            "user_id": user_id,
-            "month": month,
-            "year": year,
-            "total_expense": float(totals_row[0]) if totals_row else 0.0,
-            "total_income": float(totals_row[1]) if totals_row else 0.0,
-            "expenses_by_category": {
-                row[0] or "uncategorized": float(row[1]) for row in category_rows
-            },
-        }
-    except Exception as exc:  # pragma: no cover - runtime guard
-        raise HTTPException(status_code=500, detail=f"Failed to fetch summary: {exc}") from exc
-    finally:
-        conn.close()
-
 def _check_budget_warning(user_id: str, category: str, new_amount: float, txn_date: date) -> dict:
     """Check if adding this transaction would exceed budget threshold or limit."""
     if not category:
@@ -503,47 +451,83 @@ def transaction_summary(
     year: int | None = None,
     user_id: str = Depends(get_current_user_id),
 ):
-    current = datetime.utcnow()
-    month = month or current.month
-    year = year or current.year
-
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    COALESCE(SUM(CASE WHEN txn_type = 'expense' THEN amount END), 0) AS total_expense,
-                    COALESCE(SUM(CASE WHEN txn_type = 'income' THEN amount END), 0) AS total_income
-                FROM transactions
-                WHERE user_id = %s AND month = %s AND year = %s;
-                """,
-                (user_id, month, year),
-            )
-            totals_row = cur.fetchone()
+            if month is None and year is None:
+                # Return all-time totals
+                cur.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(CASE WHEN txn_type = 'expense' THEN amount END), 0) AS total_expense,
+                        COALESCE(SUM(CASE WHEN txn_type = 'income' THEN amount END), 0) AS total_income
+                    FROM transactions
+                    WHERE user_id = %s;
+                    """,
+                    (user_id,),
+                )
+                totals_row = cur.fetchone()
 
-            cur.execute(
-                """
-                SELECT category, COALESCE(SUM(amount), 0) AS total
-                FROM transactions
-                WHERE user_id = %s AND txn_type = 'expense' AND month = %s AND year = %s
-                GROUP BY category
-                ORDER BY total DESC;
-                """,
-                (user_id, month, year),
-            )
-            category_rows = cur.fetchall()
+                cur.execute(
+                    """
+                    SELECT category, COALESCE(SUM(amount), 0) AS total
+                    FROM transactions
+                    WHERE user_id = %s AND txn_type = 'expense'
+                    GROUP BY category
+                    ORDER BY total DESC;
+                    """,
+                    (user_id,),
+                )
+                category_rows = cur.fetchall()
 
-        return {
-            "user_id": user_id,
-            "month": month,
-            "year": year,
-            "total_expense": float(totals_row[0]) if totals_row else 0.0,
-            "total_income": float(totals_row[1]) if totals_row else 0.0,
-            "expenses_by_category": {
-                row[0] or "uncategorized": float(row[1]) for row in category_rows
-            },
-        }
+                return {
+                    "user_id": user_id,
+                    "total_expense": float(totals_row[0]) if totals_row else 0.0,
+                    "total_income": float(totals_row[1]) if totals_row else 0.0,
+                    "expenses_by_category": {
+                        row[0] or "uncategorized": float(row[1]) for row in category_rows
+                    },
+                }
+            else:
+                # Return monthly totals
+                current = datetime.utcnow()
+                month = month or current.month
+                year = year or current.year
+                
+                cur.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(CASE WHEN txn_type = 'expense' THEN amount END), 0) AS total_expense,
+                        COALESCE(SUM(CASE WHEN txn_type = 'income' THEN amount END), 0) AS total_income
+                    FROM transactions
+                    WHERE user_id = %s AND month = %s AND year = %s;
+                    """,
+                    (user_id, month, year),
+                )
+                totals_row = cur.fetchone()
+
+                cur.execute(
+                    """
+                    SELECT category, COALESCE(SUM(amount), 0) AS total
+                    FROM transactions
+                    WHERE user_id = %s AND txn_type = 'expense' AND month = %s AND year = %s
+                    GROUP BY category
+                    ORDER BY total DESC;
+                    """,
+                    (user_id, month, year),
+                )
+                category_rows = cur.fetchall()
+
+                return {
+                    "user_id": user_id,
+                    "month": month,
+                    "year": year,
+                    "total_expense": float(totals_row[0]) if totals_row else 0.0,
+                    "total_income": float(totals_row[1]) if totals_row else 0.0,
+                    "expenses_by_category": {
+                        row[0] or "uncategorized": float(row[1]) for row in category_rows
+                    },
+                }
     except Exception as exc:  # pragma: no cover - runtime guard
         raise HTTPException(status_code=500, detail=f"Failed to fetch summary: {exc}") from exc
     finally:
