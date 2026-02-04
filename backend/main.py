@@ -18,6 +18,7 @@ from income import router as income_router
 from transactions import router as transactions_router
 from budgets import router as budgets_router
 from goals import router as goals_router
+from reports import router as reports_router
 
 
 app = FastAPI(title="WealthWise Backend")
@@ -38,6 +39,7 @@ app.include_router(income_router)
 app.include_router(transactions_router)
 app.include_router(budgets_router)
 app.include_router(goals_router)
+app.include_router(reports_router)
 
 
 @app.get("/")

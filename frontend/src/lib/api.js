@@ -232,6 +232,82 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // ======================== REPORTS ENDPOINTS ========================
+
+  // L1: Core Analytics
+  async getIncomeVsExpenseTrends(months = 12) {
+    return this.request(`/reports/trends/income-vs-expense?months=${months}`);
+  }
+
+  async getCategorySpendingBreakdown(year, month) {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year);
+    if (month) params.append('month', month);
+    return this.request(`/reports/breakdown/category-spending?${params}`);
+  }
+
+  async getPaymentModeBreakdown(year, month) {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year);
+    if (month) params.append('month', month);
+    return this.request(`/reports/breakdown/payment-mode?${params}`);
+  }
+
+  async getGoalsProgress() {
+    return this.request('/reports/goals/progress');
+  }
+
+  async getBudgetsPerformance(year, month) {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year);
+    if (month) params.append('month', month);
+    return this.request(`/reports/budgets/performance?${params}`);
+  }
+
+  // L2: Advanced Analytics
+  async getSavingsRateTrend(months = 12) {
+    return this.request(`/reports/trends/savings-rate?months=${months}`);
+  }
+
+  async getTopTransactionsReport(limit = 10, txnType = 'expense') {
+    return this.request(`/reports/breakdown/top-transactions?limit=${limit}&txn_type=${txnType}`);
+  }
+
+  async getMonthlyComparison() {
+    return this.request('/reports/trends/monthly-comparison');
+  }
+
+  async getRecurringExpensesReport() {
+    return this.request('/reports/patterns/recurring-expenses');
+  }
+
+  async getSpendingAnomaliesReport() {
+    return this.request('/reports/patterns/spending-anomalies');
+  }
+
+  async getDetailedSummary(year, month) {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year);
+    if (month) params.append('month', month);
+    return this.request(`/reports/summary/detailed?${params}`);
+  }
+
+  // Export Endpoints
+  async exportToCSV(year, month, reportType = 'transactions') {
+    const params = new URLSearchParams();
+    if (year !== null && year !== undefined) params.append('year', year);
+    if (month !== null && month !== undefined) params.append('month', month);
+    params.append('report_type', reportType);
+    return this.request(`/reports/export/csv?${params}`);
+  }
+
+  async getExportSummaryData(year, month) {
+    const params = new URLSearchParams();
+    if (year !== null && year !== undefined) params.append('year', year);
+    if (month !== null && month !== undefined) params.append('month', month);
+    return this.request(`/reports/export/summary-data?${params}`);
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);
