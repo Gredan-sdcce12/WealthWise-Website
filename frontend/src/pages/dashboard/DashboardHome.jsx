@@ -86,6 +86,7 @@ export default function DashboardHome() {
   const outletCtx = useOutletContext?.() || {};
   const {
     latestIncome: sharedIncome,
+    userId,
     allowUsePrevious: sharedAllowUsePrevious,
     handleSaveIncome: sharedSaveIncome,
     handleCopyPrevious: sharedCopyIncome,
@@ -122,8 +123,9 @@ export default function DashboardHome() {
   const [localLastIncome, setLocalLastIncome] = useState(null);
   useEffect(() => {
     if (!sharedIncome) {
-      // Try to fetch from localStorage as fallback
-      const stored = localStorage.getItem("ww:last-income");
+      // Try to fetch from localStorage as fallback (user-specific)
+      if (!userId) return;
+      const stored = localStorage.getItem(`ww:last-income:${userId}`);
       if (stored) {
         try {
           setLocalLastIncome(JSON.parse(stored));
@@ -132,7 +134,7 @@ export default function DashboardHome() {
     } else {
       setLocalLastIncome(null); // clear fallback if context provides
     }
-  }, [sharedIncome, showIncomePrompt]);
+  }, [sharedIncome, showIncomePrompt, userId]);
 
 
   const previousIncome = sharedIncome || localLastIncome;
@@ -420,6 +422,7 @@ const upcomingBills = [
           onSubmit={sharedSaveIncome}
           previousIncome={previousIncome}
           loading={Boolean(sharedSaving)}
+          storageKey={userId ? `ww:last-income:${userId}` : undefined}
           showTrigger={false}
         />
       </div>

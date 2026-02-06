@@ -18,6 +18,31 @@ export function DashboardLayout() {
   const [isSavingIncome, setIsSavingIncome] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const getIncomeStorageKey = useCallback(
+    (uid) => (uid ? `ww:last-income:${uid}` : null),
+    []
+  );
+
+  const persistLastIncome = useCallback(
+    (uid, income) => {
+      const key = getIncomeStorageKey(uid);
+      if (!key || !income) return;
+      const payload = {
+        amount: income.amount,
+        frequency: income.income_type || income.frequency || "monthly",
+        source: income.source || "",
+        note: income.note || "",
+        receivedDate: income.received_date || income.receivedDate || new Date().toISOString().slice(0, 10),
+      };
+      try {
+        localStorage.setItem(key, JSON.stringify(payload));
+      } catch (err) {
+        // Ignore storage errors.
+      }
+    },
+    [getIncomeStorageKey]
+  );
+
   const fetchMonthlyIncomeTotal = useCallback(
     async (uid, month, year) => {
       if (!uid) return;
@@ -48,6 +73,7 @@ export function DashboardLayout() {
         const hasIncome = body?.amount !== null && body?.amount !== undefined;
         if (hasIncome) {
           setLatestIncome(body);
+          persistLastIncome(uid, body);
         }
         // Fetch current month's income total
         const now = new Date();
@@ -64,7 +90,7 @@ export function DashboardLayout() {
     return () => {
       active = false;
     };
-  }, [fetchMonthlyIncomeTotal]); // Added fetchMonthlyIncomeTotal as a dependency
+  }, [fetchMonthlyIncomeTotal, persistLastIncome]); // Added fetchMonthlyIncomeTotal as a dependency
 
   const handleSaveIncome = useCallback(
     async ({ amount, income_type, source, note, received_date }) => {
@@ -79,6 +105,7 @@ export function DashboardLayout() {
           received_date,
         });
         setLatestIncome(created);
+        persistLastIncome(userId, created);
         await fetchMonthlyIncomeTotal(userId, created.month, created.year);
         toast({ title: "Income saved", description: "You're good to go." });
       } catch (err) {
@@ -97,6 +124,7 @@ export function DashboardLayout() {
       setIsSavingIncome(true);
       const created = await api.copyPreviousIncome();
       setLatestIncome(created);
+      persistLastIncome(userId, created);
       toast({ title: "Income copied", description: "Using your previous income." });
     } catch (err) {
       toast({ title: "Unable to reuse income", description: err?.message || "Please try again." });
@@ -127,6 +155,7 @@ export function DashboardLayout() {
           <Outlet
             context={{
               latestIncome,
+              userId,
               handleSaveIncome,
               handleCopyPrevious,
               monthlyIncomeTotal,
