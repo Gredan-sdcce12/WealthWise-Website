@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,70 +72,110 @@ export default function Reports() {
   const [detailedSummary, setDetailedSummary] = useState(null);
   const [exporting, setExporting] = useState(false);
 
-  // Fetch all reports data
-  useEffect(() => {
-    fetchAllReports();
-  }, [selectedMonth, selectedYear, trendMonths]);
-
-  const fetchAllReports = async () => {
-    try {
-      setIsLoading(true);
-      
-      // L1: Core Analytics
-      const [
-        iveTrends,
-        categorySpend,
-        paymentModes,
-        goalsProg,
-        budgetPerf,
-      ] = await Promise.all([
-        api.getIncomeVsExpenseTrends(trendMonths),
-        api.getCategorySpendingBreakdown(selectedYear, selectedMonth),
-        api.getPaymentModeBreakdown(selectedYear, selectedMonth),
-        api.getGoalsProgress(),
-        api.getBudgetsPerformance(selectedYear, selectedMonth),
-      ]);
-
-      setIncomeVsExpense(iveTrends);
-      setCategoryBreakdown(categorySpend.breakdown || []);
-      setPaymentModeBreakdown(paymentModes);
-      setGoalsProgress(goalsProg.goals || []);
-      setBudgetsPerformance(budgetPerf);
-
-      // L2: Advanced Analytics
-      const [
-        savingsRateTrend,
-        topTxns,
-        recurringTxns,
-        anomalies,
-        monthComp,
-        summary,
-      ] = await Promise.all([
-        api.getSavingsRateTrend(trendMonths),
-        api.getTopTransactionsReport(10, "expense"),
-        api.getRecurringExpensesReport(),
-        api.getSpendingAnomaliesReport(),
-        api.getMonthlyComparison(),
-        api.getDetailedSummary(selectedYear, selectedMonth),
-      ]);
-
-      setSavingsRate(savingsRateTrend);
-      setTopTransactions(topTxns.transactions || []);
-      setRecurringExpenses(recurringTxns.recurring_expenses || []);
-      setSpendingAnomalies(anomalies.anomalies || []);
-      setMonthlyComparison(monthComp);
-      setDetailedSummary(summary);
-    } catch (error) {
-      console.error("Error fetching reports:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load reports data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+  const pieCategoryData = useMemo(() => {
+    if (!categoryBreakdown?.length) {
+      return [];
     }
-  };
+
+    const sorted = [...categoryBreakdown].sort(
+      (a, b) => (b.total_amount || 0) - (a.total_amount || 0)
+    );
+    const maxItems = 6;
+
+    if (sorted.length <= maxItems) {
+      return sorted;
+    }
+
+    const top = sorted.slice(0, maxItems - 1);
+    const rest = sorted.slice(maxItems - 1);
+    const restTotal = rest.reduce((sum, item) => sum + (item.total_amount || 0), 0);
+    const total = sorted.reduce((sum, item) => sum + (item.total_amount || 0), 0);
+    const restPercentage = total > 0 ? Number(((restTotal / total) * 100).toFixed(1)) : 0;
+
+    return [
+      ...top,
+      {
+        category: "Others",
+        total_amount: restTotal,
+        percentage: restPercentage,
+      },
+    ];
+  }, [categoryBreakdown]);
+
+  // Fetch month-specific reports data
+  useEffect(() => {
+    const fetchMonthReports = async () => {
+      try {
+        setIsLoading(true);
+        const [categorySpend, paymentModes, budgetPerf, summary] = await Promise.all([
+          api.getCategorySpendingBreakdown(selectedYear, selectedMonth),
+          api.getPaymentModeBreakdown(selectedYear, selectedMonth),
+          api.getBudgetsPerformance(selectedYear, selectedMonth),
+          api.getDetailedSummary(selectedYear, selectedMonth),
+        ]);
+
+        setCategoryBreakdown(categorySpend.breakdown || []);
+        setPaymentModeBreakdown(paymentModes);
+        setBudgetsPerformance(budgetPerf);
+        setDetailedSummary(summary);
+      } catch (error) {
+        console.error("Error fetching month reports:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load monthly reports",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMonthReports();
+  }, [selectedMonth, selectedYear]);
+
+  // Fetch trend reports data (depends on trend period)
+  useEffect(() => {
+    const fetchTrendReports = async () => {
+      try {
+        const [iveTrends, savingsRateTrend] = await Promise.all([
+          api.getIncomeVsExpenseTrends(trendMonths),
+          api.getSavingsRateTrend(trendMonths),
+        ]);
+
+        setIncomeVsExpense(iveTrends);
+        setSavingsRate(savingsRateTrend);
+      } catch (error) {
+        console.error("Error fetching trend reports:", error);
+      }
+    };
+
+    fetchTrendReports();
+  }, [trendMonths]);
+
+  // Fetch static reports data (load once)
+  useEffect(() => {
+    const fetchStaticReports = async () => {
+      try {
+        const [goalsProg, topTxns, recurringTxns, anomalies, monthComp] = await Promise.all([
+          api.getGoalsProgress(),
+          api.getTopTransactionsReport(10, "expense"),
+          api.getRecurringExpensesReport(),
+          api.getSpendingAnomaliesReport(),
+          api.getMonthlyComparison(),
+        ]);
+
+        setGoalsProgress(goalsProg.goals || []);
+        setTopTransactions(topTxns.transactions || []);
+        setRecurringExpenses(recurringTxns.recurring_expenses || []);
+        setSpendingAnomalies(anomalies.anomalies || []);
+        setMonthlyComparison(monthComp);
+      } catch (error) {
+        console.error("Error fetching static reports:", error);
+      }
+    };
+
+    fetchStaticReports();
+  }, []);
 
   // ======================== Export Functions ========================
 
@@ -746,16 +786,19 @@ export default function Reports() {
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
-                          data={categoryBreakdown}
+                          data={pieCategoryData}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percentage }) => `${name}: ${percentage}%`}
+                          label={({ payload }) =>
+                            payload?.percentage >= 5 ? `${payload.category}: ${payload.percentage}%` : ""
+                          }
                           outerRadius={80}
                           fill="#8884d8"
+                          nameKey="category"
                           dataKey="total_amount"
                         >
-                          {categoryBreakdown.map((entry, index) => (
+                          {pieCategoryData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -764,8 +807,8 @@ export default function Reports() {
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="flex-1 space-y-2 max-h-80 overflow-y-auto">
-                    {categoryBreakdown.map((item, idx) => (
+                  <div className="flex-1 space-y-2 max-h-72 overflow-y-auto">
+                    {pieCategoryData.map((item, idx) => (
                       <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
@@ -792,7 +835,7 @@ export default function Reports() {
               <CardDescription>Detailed breakdown by category</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead className="border-b">
                     <tr>
