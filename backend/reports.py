@@ -429,20 +429,32 @@ def get_budgets_performance(
     user_id: str = Depends(get_current_user_id),
 ):
     """
-    LEVEL 1: Get budget vs actual performance.
+    LEVEL 1: Get budget vs actual performance for the selected period.
+    Only shows budgets that were active during the selected month/year.
     """
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            # Get all budgets
-            cur.execute(
-                """
+            # Build query to filter budgets by the selected period
+            budget_query = """
                 SELECT id, category, amount, budget_type, start_date, alert_threshold
                 FROM budgets
-                WHERE user_id = %s;
-                """,
-                (user_id,),
-            )
+                WHERE user_id = %s
+            """
+            budget_params = [user_id]
+            
+            # Filter budgets: only include those where start_date is on or before the selected month
+            if year and month:
+                # Convert selected month to a date (first day of the month)
+                budget_query += """
+                    AND EXTRACT(YEAR FROM start_date) = %s 
+                    AND EXTRACT(MONTH FROM start_date) = %s
+                """
+                budget_params.extend([year, month])
+            
+            budget_query += ";"
+            
+            cur.execute(budget_query, tuple(budget_params))
             budgets = cur.fetchall()
             
             performance = []
