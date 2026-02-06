@@ -119,11 +119,11 @@ export function DashboardLayout() {
 
       <div
         className={cn(
-          "transition-all duration-300",
+          "transition-all duration-300 bg-background",
           sidebarCollapsed ? "ml-[70px]" : "ml-[260px]"
         )}
       >
-        <main className="p-6">
+        <main className="p-6 bg-background min-h-screen">
           <Outlet
             context={{
               latestIncome,

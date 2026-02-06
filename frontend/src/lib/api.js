@@ -308,6 +308,35 @@ class ApiClient {
     if (month !== null && month !== undefined) params.append('month', month);
     return this.request(`/reports/export/summary-data?${params}`);
   }
+
+  // Profile endpoints
+  async getProfile() {
+    return this.request('/profile/');
+  }
+
+  async updateProfile(data) {
+    return this.request('/profile/', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSettings(data) {
+    return this.request('/profile/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProfileStats() {
+    return this.request('/profile/stats');
+  }
+
+  async deleteProfile() {
+    return this.request('/profile/', {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const api = new ApiClient(API_BASE_URL);

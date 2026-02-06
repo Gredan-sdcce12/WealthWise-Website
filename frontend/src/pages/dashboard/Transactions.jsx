@@ -518,7 +518,7 @@ export default function Transactions() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold">Expenses</h1>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Step 3: Log Expenses</Badge>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 dark:bg-primary/20 dark:border-primary/30">Step 3: Log Expenses</Badge>
           </div>
           <p className="text-muted-foreground mt-1">Track and manage your daily spending</p>
         </div>
@@ -721,11 +721,11 @@ export default function Transactions() {
                         <div className="flex items-center gap-2">
                           {transaction.description}
                           {transaction.source === 'ocr' ? (
-                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-300">
+                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:border-primary/30">
                               📷 OCR
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-gray-600">
+                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground">
                               ✏️ Manual
                             </Badge>
                           )}
@@ -745,7 +745,7 @@ export default function Transactions() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(transaction)}
-                          className="hover:bg-blue-100 hover:text-blue-600"
+                          className="hover:bg-secondary hover:text-primary"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>

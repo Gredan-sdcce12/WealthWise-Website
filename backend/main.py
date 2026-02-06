@@ -19,6 +19,7 @@ from transactions import router as transactions_router
 from budgets import router as budgets_router
 from goals import router as goals_router
 from reports import router as reports_router
+from profile import router as profile_router
 
 
 app = FastAPI(title="WealthWise Backend")
@@ -40,12 +41,23 @@ app.include_router(transactions_router)
 app.include_router(budgets_router)
 app.include_router(goals_router)
 app.include_router(reports_router)
+app.include_router(profile_router)
 
 
 @app.get("/")
 def read_root():
 	"""Lightweight root endpoint to verify server is running."""
 	return {"status": "ok"}
+
+
+@app.get("/test-profile")
+def test_profile():
+	"""Test endpoint without auth."""
+	return {
+		"user_id": "test",
+		"name": "Test User",
+		"email": "test@test.com"
+	}
 
 
 @app.get("/health/db")

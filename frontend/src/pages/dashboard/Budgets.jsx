@@ -157,10 +157,10 @@ export default function Budgets() {
   const overallUsage = totalBudget ? (totalSpent / totalBudget) * 100 : 0;
 
   const overallStatus = useMemo(() => {
-    if (totalBudget === 0) return { label: "No budgets", color: "bg-gray-200 text-gray-700" };
-    if (overallUsage >= 100) return { label: "Exceeded", color: "bg-red-100 text-red-700" };
-    if (overallUsage >= 80) return { label: "Near limit", color: "bg-amber-100 text-amber-800" };
-    return { label: "On track", color: "bg-emerald-100 text-emerald-800" };
+    if (totalBudget === 0) return { label: "No budgets", color: "bg-secondary text-muted-foreground" };
+    if (overallUsage >= 100) return { label: "Exceeded", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" };
+    if (overallUsage >= 80) return { label: "Near limit", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" };
+    return { label: "On track", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" };
   }, [overallUsage, totalBudget]);
 
   // Get category label
@@ -420,7 +420,7 @@ export default function Budgets() {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold">Budget Planner</h1>
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Step 2: Set Budgets</Badge>
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">Step 2: Set Budgets</Badge>
           </div>
           <p className="text-muted-foreground">Set monthly limits and track your spending</p>
         </div>
@@ -463,8 +463,8 @@ export default function Budgets() {
         <Card variant="elevated">
           <CardContent className="p-6">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Total Budget</p>
@@ -479,12 +479,12 @@ export default function Budgets() {
         <Card variant="elevated">
           <CardContent className="p-6">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Spent So Far</p>
-                <p className="text-2xl font-bold text-red-600 mt-1">₹{totalSpent.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">₹{totalSpent.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground mt-1">From logged transactions</p>
               </div>
             </div>
@@ -495,12 +495,12 @@ export default function Budgets() {
         <Card variant="elevated">
           <CardContent className="p-6">
             <div className="space-y-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <PiggyBank className="w-5 h-5 text-emerald-600" />
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <PiggyBank className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Remaining</p>
-                <p className={`text-2xl font-bold mt-1 ${remainingBudget >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                <p className={`text-2xl font-bold mt-1 ${remainingBudget >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   ₹{remainingBudget.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">Safe to spend</p>
@@ -546,9 +546,9 @@ export default function Budgets() {
       </div>
 
       {error && (
-        <Card variant="outline" className="border-red-200 bg-red-50">
+        <Card variant="outline" className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20">
           <CardContent className="p-4">
-            <div className="flex items-start gap-3 text-red-700">
+            <div className="flex items-start gap-3 text-red-700 dark:text-red-400">
               <AlertTriangle className="w-5 h-5 mt-0.5" />
               <div>
                 <p className="font-semibold">Error loading budgets</p>
@@ -563,7 +563,7 @@ export default function Budgets() {
         <Card variant="outline" className="border-dashed">
           <CardContent className="p-4 space-y-2">
             {budgetsExceeded.length > 0 && (
-              <div className="flex items-start gap-3 text-red-700">
+              <div className="flex items-start gap-3 text-red-700 dark:text-red-400">
                 <AlertTriangle className="w-5 h-5 mt-0.5" />
                 <div>
                   <p className="font-semibold">Budget exceeded</p>
@@ -574,7 +574,7 @@ export default function Budgets() {
               </div>
             )}
             {budgetsWithWarnings.length > 0 && (
-              <div className="flex items-start gap-3 text-amber-700">
+              <div className="flex items-start gap-3 text-amber-700 dark:text-amber-400">
                 <AlertCircle className="w-5 h-5 mt-0.5" />
                 <div>
                   <p className="font-semibold">Approaching limit</p>
@@ -605,10 +605,10 @@ export default function Budgets() {
             {isLoading && (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="rounded-xl border p-4 animate-pulse">
-                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-3"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  <div key={i} className="rounded-xl border border-border p-4 animate-pulse">
+                    <div className="h-6 bg-secondary rounded w-1/3 mb-3"></div>
+                    <div className="h-4 bg-secondary rounded w-full mb-2"></div>
+                    <div className="h-4 bg-secondary rounded w-2/3"></div>
                   </div>
                 ))}
               </div>
@@ -624,7 +624,7 @@ export default function Budgets() {
               const status = getStatusForBudget(budget.spent, budget.amount, budget.alertThreshold || 80);
 
               return (
-                <div key={budget.id} className="rounded-xl border px-4 py-3 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.35)] bg-white/70">
+                <div key={budget.id} className="rounded-xl border border-border px-4 py-3 shadow-[0_8px_24px_-18px_rgba(0,0,0,0.35)] bg-card">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{getCategoryIcon(budget.category)}</span>
@@ -652,7 +652,7 @@ export default function Budgets() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(budget.id)}
-                        className="hover:bg-red-100 hover:text-red-600"
+                        className="hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -679,11 +679,11 @@ export default function Budgets() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Spent</p>
-                      <p className="font-semibold text-red-600">₹{budget.spent.toLocaleString()}</p>
+                      <p className="font-semibold text-red-600 dark:text-red-400">₹{budget.spent.toLocaleString()}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Remaining</p>
-                      <p className={`font-semibold ${remaining >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      <p className={`font-semibold ${remaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                         {remaining >= 0 ? "₹" : "-₹"}{Math.abs(remaining).toLocaleString()}
                       </p>
                     </div>
@@ -737,7 +737,7 @@ export default function Budgets() {
                   )}
 
                   <div className="mt-3 space-y-1">
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${getProgressColor(percentage)}`}
                         style={{ width: `${Math.min(percentage, 110)}%` }}
@@ -745,16 +745,16 @@ export default function Budgets() {
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>{percentage.toFixed(1)}% used</span>
-                      {percentage >= 100 ? <span className="text-red-600 font-semibold">Exceeded</span> : null}
+                      {percentage >= 100 ? <span className="text-red-600 dark:text-red-400 font-semibold">Exceeded</span> : null}
                     </div>
                     {percentage >= (budget.alertThreshold || 80) && (
                       <div className="flex items-center gap-2 text-xs">
                         {percentage >= 100 ? (
-                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                          <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
                         ) : (
-                          <AlertCircle className="w-4 h-4 text-amber-500" />
+                          <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                         )}
-                        <span className={percentage >= 100 ? "text-red-700" : "text-amber-700"}>
+                        <span className={percentage >= 100 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}>
                           {percentage >= 100
                             ? `Exceeded by ₹${Math.abs(remaining).toLocaleString()}`
                             : `Almost at limit: ${percentage.toFixed(0)}%`}
@@ -869,10 +869,10 @@ export default function Budgets() {
             </CardContent>
           </Card>
 
-          <Card variant="flat" className="border border-dashed border-emerald-100">
+          <Card variant="flat" className="border border-dashed border-emerald-100 dark:border-emerald-900/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Budget tips
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> Budget tips
               </CardTitle>
               <CardDescription>Small nudges to keep you on track</CardDescription>
             </CardHeader>

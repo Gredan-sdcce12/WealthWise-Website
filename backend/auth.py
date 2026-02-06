@@ -26,9 +26,16 @@ def get_bearer_token(authorization: Optional[str]) -> str:
 
 def get_current_user_id(authorization: Optional[str] = Header(None)) -> str:
     """Validate Supabase JWT and return the user id (sub)."""
-    # For development, allow test tokens like "test_user_123"
-    if authorization and authorization.startswith("test_"):
-        return authorization
+    # For development, allow test tokens like "test_user_123" or "Bearer test_user_123"
+    if authorization:
+        # Check if it's a direct test token (e.g., "test_user_123")
+        if authorization.startswith("test_"):
+            return authorization
+        # Check if it's Bearer + test token (e.g., "Bearer test_user_123")
+        if authorization.lower().startswith("bearer "):
+            token = authorization.split(" ", 1)[1].strip()
+            if token.startswith("test_"):
+                return token
     
     if not SUPABASE_JWT_SECRET:
         raise HTTPException(

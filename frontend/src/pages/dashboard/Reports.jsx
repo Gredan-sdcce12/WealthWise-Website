@@ -523,8 +523,8 @@ export default function Reports() {
       {/* ======================== Header & Controls ======================== */}
       <div className="flex justify-between items-start gap-4 flex-col sm:flex-row">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Financial Reports</h1>
-          <p className="text-gray-600 mt-1">Deep dive analytics and detailed insights</p>
+          <h1 className="text-3xl font-bold text-foreground">Financial Reports</h1>
+          <p className="text-muted-foreground mt-1">Deep dive analytics and detailed insights</p>
         </div>
         
         <div className="flex gap-2 flex-wrap">
@@ -540,7 +540,7 @@ export default function Reports() {
           <Button
             onClick={exportToPDF}
             disabled={exporting}
-            className="gap-2 bg-blue-600 hover:bg-blue-700"
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <FileText className="w-4 h-4" />
             {exporting ? "Generating..." : "Export PDF"}
@@ -630,43 +630,43 @@ export default function Reports() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-gray-600">Total Income</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">Total Income</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-green-600">₹{detailedSummary.total_income.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 mt-1">This period</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">₹{detailedSummary.total_income.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">This period</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-gray-600">Total Expense</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">Total Expense</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-red-600">₹{detailedSummary.total_expense.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 mt-1">This period</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-500">₹{detailedSummary.total_expense.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">This period</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-gray-600">Net Savings</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">Net Savings</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className={`text-2xl font-bold ${detailedSummary.net_savings >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  <p className={`text-2xl font-bold ${detailedSummary.net_savings >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500"}`}>
                     ₹{detailedSummary.net_savings.toLocaleString()}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">{detailedSummary.savings_percentage.toFixed(1)}% of income</p>
+                  <p className="text-xs text-muted-foreground mt-1">{detailedSummary.savings_percentage.toFixed(1)}% of income</p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm text-gray-600">Avg Transaction</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">Avg Transaction</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-blue-600">₹{detailedSummary.average_transaction.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 mt-1">{detailedSummary.transaction_count} transactions</p>
+                  <p className="text-2xl font-bold text-primary">₹{detailedSummary.average_transaction.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{detailedSummary.transaction_count} transactions</p>
                 </CardContent>
               </Card>
             </div>
@@ -747,19 +747,19 @@ export default function Reports() {
               <div className="space-y-3">
                 {monthlyComparison.map((item, idx) => (
                   <div key={idx} className="border-l-4 border-blue-500 pl-4 py-2">
-                    <p className="font-semibold text-gray-900">{item.month}</p>
+                    <p className="font-semibold text-foreground">{item.month}</p>
                     <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
                       <div>
-                        <p className="text-gray-600">Income</p>
-                        <p className="font-bold text-green-600">₹{item.income.toLocaleString()}</p>
+                        <p className="text-muted-foreground">Income</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-500">₹{item.income.toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-gray-600">Expense</p>
-                        <p className="font-bold text-red-600">₹{item.expense.toLocaleString()}</p>
+                        <p className="text-muted-foreground">Expense</p>
+                        <p className="font-bold text-red-600 dark:text-red-500">₹{item.expense.toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-gray-600">Savings</p>
-                        <p className="font-bold text-emerald-600">₹{item.net_savings.toLocaleString()}</p>
+                        <p className="text-muted-foreground">Savings</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-500">₹{item.net_savings.toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -809,21 +809,21 @@ export default function Reports() {
 
                   <div className="flex-1 space-y-2 max-h-72 overflow-y-auto">
                     {pieCategoryData.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div key={idx} className="flex items-center justify-between p-2 bg-secondary/50 rounded">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                          <span className="font-medium text-sm">{item.category}</span>
+                          <span className="font-medium text-sm text-foreground">{item.category}</span>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-sm">₹{item.total_amount.toLocaleString()}</p>
-                          <p className="text-xs text-gray-500">{item.percentage}%</p>
+                          <p className="font-bold text-sm text-foreground">₹{item.total_amount.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">{item.percentage}%</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-500">No expense data available</p>
+                <p className="text-muted-foreground">No expense data available</p>
               )}
             </CardContent>
           </Card>
@@ -839,23 +839,23 @@ export default function Reports() {
                 <table className="w-full text-sm">
                   <thead className="border-b">
                     <tr>
-                      <th className="text-left py-3 px-4 font-semibold">Category</th>
-                      <th className="text-right py-3 px-4 font-semibold">Total Amount</th>
-                      <th className="text-right py-3 px-4 font-semibold">Percentage</th>
-                      <th className="text-right py-3 px-4 font-semibold">Transactions</th>
-                      <th className="text-right py-3 px-4 font-semibold">Avg Transaction</th>
+                      <th className="text-left py-3 px-4 font-semibold text-foreground">Category</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Total Amount</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Percentage</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Transactions</th>
+                      <th className="text-right py-3 px-4 font-semibold text-foreground">Avg Transaction</th>
                     </tr>
                   </thead>
                   <tbody>
                     {categoryBreakdown.map((item, idx) => (
-                      <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4">{item.category}</td>
-                        <td className="py-3 px-4 text-right font-semibold">₹{item.total_amount.toLocaleString()}</td>
+                      <tr key={idx} className="border-b border-border hover:bg-secondary/30">
+                        <td className="py-3 px-4 text-foreground">{item.category}</td>
+                        <td className="py-3 px-4 text-right font-semibold text-foreground">₹{item.total_amount.toLocaleString()}</td>
                         <td className="py-3 px-4 text-right">
                           <Badge variant="secondary">{item.percentage}%</Badge>
                         </td>
-                        <td className="py-3 px-4 text-right">{item.transaction_count}</td>
-                        <td className="py-3 px-4 text-right">₹{item.average_transaction.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right text-foreground">{item.transaction_count}</td>
+                        <td className="py-3 px-4 text-right text-foreground">₹{item.average_transaction.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -882,10 +882,10 @@ export default function Reports() {
               </ResponsiveContainer>
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {paymentModeBreakdown.map((item, idx) => (
-                  <div key={idx} className="bg-gray-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">{item.mode}</p>
-                    <p className="font-bold text-sm mt-1">₹{item.amount.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">{item.percentage}%</p>
+                  <div key={idx} className="bg-secondary/50 p-3 rounded text-center">
+                    <p className="text-xs text-muted-foreground">{item.mode}</p>
+                    <p className="font-bold text-sm mt-1 text-foreground">₹{item.amount.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{item.percentage}%</p>
                   </div>
                 ))}
               </div>
@@ -901,7 +901,7 @@ export default function Reports() {
             <CardContent>
               <div className="space-y-2">
                 {topTransactions.map((txn, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  <div key={idx} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/30">
                     <div className="flex-1">
                       <p className="font-medium text-sm">{txn.description}</p>
                       <p className="text-xs text-gray-500">{txn.category} • {txn.date}</p>
@@ -944,7 +944,7 @@ export default function Reports() {
                       <span className="font-bold">₹{budget.budget_amount.toLocaleString()}</span>
                     </div>
                   </div>
-                  <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div className="bg-secondary rounded-full h-2 overflow-hidden">
                     <div
                       className={`h-full ${budget.percentage_used > 100 ? "bg-red-500" : budget.percentage_used >= 80 ? "bg-yellow-500" : "bg-emerald-500"}`}
                       style={{ width: `${Math.min(budget.percentage_used, 100)}%` }}
@@ -976,11 +976,11 @@ export default function Reports() {
                   </thead>
                   <tbody>
                     {budgetsPerformance.map((budget, idx) => (
-                      <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">{budget.category}</td>
-                        <td className="py-3 px-4 text-right">₹{budget.actual_spent.toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right">₹{budget.budget_amount.toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right font-bold">{budget.percentage_used.toFixed(1)}%</td>
+                      <tr key={idx} className="border-b border-border hover:bg-secondary/30">
+                        <td className="py-3 px-4 font-medium text-foreground">{budget.category}</td>
+                        <td className="py-3 px-4 text-right text-foreground">₹{budget.actual_spent.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right text-foreground">₹{budget.budget_amount.toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-bold text-foreground">{budget.percentage_used.toFixed(1)}%</td>
                         <td className="py-3 px-4 text-center">
                           <Badge variant={budget.status === "Exceeded" ? "destructive" : budget.status === "Near Limit" ? "secondary" : "outline"}>
                             {budget.status}
@@ -1023,7 +1023,7 @@ export default function Reports() {
                       <span className="font-bold">₹{goal.target_amount.toLocaleString()}</span>
                     </div>
                   </div>
-                  <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div className="bg-secondary rounded-full h-2 overflow-hidden">
                     <div
                       className="h-full bg-emerald-500"
                       style={{ width: `${Math.min(goal.progress_percentage, 100)}%` }}
@@ -1055,14 +1055,14 @@ export default function Reports() {
                   </thead>
                   <tbody>
                     {goalsProgress.map((goal, idx) => (
-                      <tr key={idx} className="border-b hover:bg-gray-50">
+                      <tr key={idx} className="border-b border-border hover:bg-secondary/30">
                         <td className="py-3 px-4">
                           <div>
-                            <p className="font-medium">{goal.goal_name}</p>
-                            <p className="text-xs text-gray-500">{goal.category}</p>
+                            <p className="font-medium text-foreground">{goal.goal_name}</p>
+                            <p className="text-xs text-muted-foreground">{goal.category}</p>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-4 text-right text-foreground">
                           <Badge>{goal.progress_percentage.toFixed(1)}%</Badge>
                         </td>
                         <td className="py-3 px-4 text-right font-semibold">₹{goal.current_amount.toLocaleString()} / ₹{goal.target_amount.toLocaleString()}</td>
