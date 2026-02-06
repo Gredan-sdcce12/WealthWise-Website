@@ -77,6 +77,10 @@ export default function DashboardHome() {
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
   const [showIncomePrompt, setShowIncomePrompt] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
+  const [userName, setUserName] = useState(() => {
+    // Load from localStorage immediately for instant display
+    return localStorage.getItem("wealthwise_username") || "";
+  });
 
   // --- Fetch Monthly Cash Flow (income, expenses, savings) ---
   const outletCtx = useOutletContext?.() || {};
@@ -95,6 +99,23 @@ export default function DashboardHome() {
   useEffect(() => {
     // Trigger refresh on mount
     setLocalRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  // Fetch user profile name
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const data = await api.getProfile();
+        if (data?.name) {
+          setUserName(data.name);
+          // Store in localStorage for instant load on next visit
+          localStorage.setItem("wealthwise_username", data.name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+      }
+    };
+    fetchUserName();
   }, []);
 
   // --- Ensure previous income is always available for AddIncomeDialog ---
@@ -344,7 +365,7 @@ const upcomingBills = [
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold">{greeting}, John! 👋</h1>
+          <h1 className="text-3xl font-bold">{greeting}{userName ? `, ${userName}` : ""}! 👋</h1>
           <p className="text-muted-foreground">Here is your financial overview for today.</p>
         </div>
         <div className="flex items-center gap-3">

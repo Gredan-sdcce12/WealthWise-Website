@@ -84,6 +84,10 @@ export default function Profile() {
       if (data.theme) {
         changeTheme(data.theme);
       }
+      // Store username in localStorage for dashboard greeting
+      if (data.name) {
+        localStorage.setItem("wealthwise_username", data.name);
+      }
       const matched = avatarOptions.find((option) => option.src === data.avatar_url);
       setSelectedAvatarId(matched?.id || "");
     } catch (error) {
@@ -117,6 +121,10 @@ export default function Profile() {
       if (editedProfile.theme) {
         changeTheme(editedProfile.theme);
       }
+      // Update localStorage with new name for dashboard greeting
+      if (editedProfile.name) {
+        localStorage.setItem("wealthwise_username", editedProfile.name);
+      }
       toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -130,6 +138,8 @@ export default function Profile() {
     try {
       localStorage.removeItem("wealthwise_session");
       localStorage.removeItem("wealthwise_user");
+      localStorage.removeItem("wealthwise_username");
+      localStorage.removeItem("wealthwise_theme");
     } catch (e) {
       // ignore localStorage errors
     }
@@ -311,7 +321,6 @@ export default function Profile() {
               >
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
-                <option value="system">System</option>
               </select>
             </div>
 
