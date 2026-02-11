@@ -10,7 +10,6 @@ import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import DashboardHome from "./pages/dashboard/DashboardHome";
 import Budgets from "./pages/dashboard/Budgets";
 import Goals from "./pages/dashboard/Goals";
-import Accounts from "./pages/dashboard/Accounts";
 import Transactions from "./pages/dashboard/Transactions";
 import Reports from "./pages/dashboard/Reports";
 import Profile from "./pages/dashboard/Profile";
@@ -33,7 +32,6 @@ const App = () => (
                 <Route index element={<DashboardHome />} />
                 <Route path="budgets" element={<Budgets />} />
                 <Route path="goals" element={<Goals />} />
-                <Route path="accounts" element={<Accounts />} />
                 <Route path="transactions" element={<Transactions />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="profile" element={<Profile />} />
