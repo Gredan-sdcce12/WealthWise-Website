@@ -935,7 +935,7 @@ export default function Transactions() {
             {!scannedData && !scanning && (
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                 <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">Upload a receipt image or PDF</p>
+                <p className="text-muted-foreground mb-4">Upload a receipt image</p>
                 <div className="flex gap-2 justify-center">
                   <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                     <Upload className="w-4 h-4 mr-2" />
