@@ -286,6 +286,13 @@ class ApiClient {
     return this.request('/reports/patterns/spending-anomalies');
   }
 
+  async getAIInsightsSummary(year, month) {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year);
+    if (month) params.append('month', month);
+    return this.request(`/reports/insights/summary?${params}`);
+  }
+
   async getDetailedSummary(year, month) {
     const params = new URLSearchParams();
     if (year) params.append('year', year);

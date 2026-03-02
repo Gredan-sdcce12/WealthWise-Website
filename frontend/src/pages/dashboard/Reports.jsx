@@ -70,6 +70,7 @@ export default function Reports() {
   const [spendingAnomalies, setSpendingAnomalies] = useState([]);
   const [monthlyComparison, setMonthlyComparison] = useState([]);
   const [detailedSummary, setDetailedSummary] = useState(null);
+  const [aiInsights, setAiInsights] = useState(null);
   const [exporting, setExporting] = useState(false);
 
   const pieCategoryData = useMemo(() => {
@@ -107,17 +108,19 @@ export default function Reports() {
     const fetchMonthReports = async () => {
       try {
         setIsLoading(true);
-        const [categorySpend, paymentModes, budgetPerf, summary] = await Promise.all([
+        const [categorySpend, paymentModes, budgetPerf, summary, insights] = await Promise.all([
           api.getCategorySpendingBreakdown(selectedYear, selectedMonth),
           api.getPaymentModeBreakdown(selectedYear, selectedMonth),
           api.getBudgetsPerformance(selectedYear, selectedMonth),
           api.getDetailedSummary(selectedYear, selectedMonth),
+          api.getAIInsightsSummary(selectedYear, selectedMonth),
         ]);
 
         setCategoryBreakdown(categorySpend.breakdown || []);
         setPaymentModeBreakdown(paymentModes);
         setBudgetsPerformance(budgetPerf);
         setDetailedSummary(summary);
+        setAiInsights(insights);
       } catch (error) {
         console.error("Error fetching month reports:", error);
         toast({
@@ -1080,101 +1083,143 @@ export default function Reports() {
       {/* ======================== INSIGHTS SECTION ======================== */}
       {activeTab === "insights" && (
         <div className="space-y-6">
-          {/* Recurring Expenses */}
+          {/* AI Spending Forecast */}
           <Card>
             <CardHeader>
-              <CardTitle>Recurring Expenses Detected</CardTitle>
-              <CardDescription>Expenses that appear multiple times</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+                📈 AI Spending Forecast
+              </CardTitle>
+              <CardDescription>Predicted next month expense using Linear Regression</CardDescription>
             </CardHeader>
             <CardContent>
-              {recurringExpenses.length > 0 ? (
-                <div className="space-y-3">
-                  {recurringExpenses.map((exp, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium text-sm">{exp.description}</p>
-                        <p className="text-xs text-gray-500">{exp.category}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">₹{exp.average_amount.toLocaleString()}</p>
-                        <Badge variant="outline">{exp.frequency}x</Badge>
-                      </div>
-                    </div>
-                  ))}
+              {aiInsights?.spending_forecast ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-600 font-medium mb-1">Predicted Next Month Expense</p>
+                    <p className="text-3xl font-bold text-blue-900">₹{aiInsights.spending_forecast.predicted_next_month.toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-600">Average Monthly Expense</span>
+                    <span className="font-semibold">₹{aiInsights.spending_forecast.average_monthly_expense.toLocaleString()}</span>
+                  </div>
                 </div>
               ) : (
-                <p className="text-gray-500 text-sm">No recurring expenses detected yet</p>
+                <p className="text-gray-500 text-sm">Not enough data for prediction</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Spending Anomalies */}
+          {/* Anomaly Detection */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
-                Spending Anomalies
+                ⚠️ Anomaly Detection
               </CardTitle>
-              <CardDescription>Unusual spending patterns detected</CardDescription>
+              <CardDescription>AI-based unusual spending detection (threshold: 1.8× average)</CardDescription>
             </CardHeader>
             <CardContent>
-              {spendingAnomalies.length > 0 ? (
+              {aiInsights?.anomaly_detection ? (
                 <div className="space-y-3">
-                  {spendingAnomalies.map((anomaly, idx) => (
-                    <Alert key={idx} className={anomaly.type === "High Spending" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}>
-                      <AlertTriangle className={`w-4 h-4 ${anomaly.type === "High Spending" ? "text-red-600" : "text-amber-600"}`} />
+                  {aiInsights.anomaly_detection.is_anomaly ? (
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertTriangle className="w-4 h-4 text-red-600" />
                       <AlertDescription>
-                        <p className="font-semibold">{anomaly.month}</p>
-                        <p className="text-sm mt-1">
-                          {anomaly.type === "High Spending" ? "📈" : "📉"} {anomaly.type} in {anomaly.month}: ₹{anomaly.amount.toLocaleString()}
-                          <span className={anomaly.deviation_percentage > 0 ? "text-red-600" : "text-amber-600"}>
-                            {" "}({anomaly.deviation_percentage > 0 ? "+" : ""}{anomaly.deviation_percentage}% from average)
-                          </span>
+                        <p className="font-semibold text-red-900">⚠️ Unusual Spending Detected!</p>
+                        <p className="text-sm mt-2 text-red-800">
+                          Latest month expense: <span className="font-bold">₹{aiInsights.anomaly_detection.latest_month_expense.toLocaleString()}</span>
+                        </p>
+                        <p className="text-sm text-red-700">
+                          This exceeds your average by more than 80% (Threshold: ₹{aiInsights.anomaly_detection.threshold.toLocaleString()})
                         </p>
                       </AlertDescription>
                     </Alert>
-                  ))}
+                  ) : (
+                    <Alert className="border-green-200 bg-green-50">
+                      <AlertDescription>
+                        <p className="font-semibold text-green-900">✅ No Anomalies Detected</p>
+                        <p className="text-sm mt-2 text-green-800">
+                          Latest month expense: <span className="font-bold">₹{aiInsights.anomaly_detection.latest_month_expense.toLocaleString()}</span> is within normal range.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600">Average Expense</p>
+                      <p className="font-semibold">₹{aiInsights.anomaly_detection.average_expense.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600">Anomaly Threshold</p>
+                      <p className="font-semibold">₹{aiInsights.anomaly_detection.threshold.toLocaleString()}</p>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <p className="text-gray-500 text-sm">No spending anomalies detected</p>
+                <p className="text-gray-500 text-sm">Not enough data for anomaly detection</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Key Insights */}
+          {/* Savings Projection */}
           <Card>
             <CardHeader>
-              <CardTitle>Key Insights</CardTitle>
-              <CardDescription>Summary of your financial health</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-green-500" />
+                💰 Savings Projection
+              </CardTitle>
+              <CardDescription>AI-based savings forecast for next 6 months</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {detailedSummary && (
-                  <>
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-semibold text-green-900">
-                        💚 Savings: Your savings rate is {detailedSummary.savings_percentage.toFixed(1)}% of income
-                      </p>
+              {aiInsights?.savings_projection ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                    <p className="text-sm text-green-600 font-medium mb-1">Projected Savings (6 Months)</p>
+                    <p className="text-3xl font-bold text-green-900">₹{aiInsights.savings_projection.projected_savings_6_months.toLocaleString()}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600">Avg Income</p>
+                      <p className="font-semibold text-sm">₹{aiInsights.savings_projection.average_income.toLocaleString()}</p>
                     </div>
-
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm font-semibold text-blue-900">
-                        📊 Transactions: Average transaction is ₹{detailedSummary.average_transaction.toLocaleString()} across {detailedSummary.category_count} categories
-                      </p>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600">Avg Expense</p>
+                      <p className="font-semibold text-sm">₹{aiInsights.savings_projection.average_expense.toLocaleString()}</p>
                     </div>
-
-                    {categoryBreakdown.length > 0 && (
-                      <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <p className="text-sm font-semibold text-purple-900">
-                          🎯 Top Category: {categoryBreakdown[0].category} ({categoryBreakdown[0].percentage}% of spending)
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs text-gray-600">Monthly Savings</p>
+                      <p className="font-semibold text-sm">₹{aiInsights.savings_projection.projected_monthly_savings.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">Not enough data for savings projection</p>
+              )}
             </CardContent>
           </Card>
+
+          {/* Monthly Expenses Trend Chart */}
+          {aiInsights?.monthly_expenses && aiInsights.monthly_expenses.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Monthly Expense Trend</CardTitle>
+                <CardDescription>Historical data used for prediction</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={aiInsights.monthly_expenses}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `₹${value.toLocaleString()}`} />
+                    <Legend />
+                    <Line type="monotone" dataKey="expense" stroke="#3b82f6" strokeWidth={2} name="Monthly Expense" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>

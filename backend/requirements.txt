@@ -6,3 +6,5 @@ PyJWT
 pytesseract
 Pillow
 python-multipart
+pandas
+scikit-learn

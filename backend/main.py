@@ -20,6 +20,7 @@ from budgets import router as budgets_router
 from goals import router as goals_router
 from reports import router as reports_router
 from profile import router as profile_router
+from routes.ai_predictions import router as ai_predictions_router
 
 
 app = FastAPI(title="WealthWise Backend")
@@ -42,6 +43,7 @@ app.include_router(budgets_router)
 app.include_router(goals_router)
 app.include_router(reports_router)
 app.include_router(profile_router)
+app.include_router(ai_predictions_router)
 
 
 @app.get("/")
