@@ -112,7 +112,7 @@ export default function Goals() {
       const deadlineDate = new Date();
       deadlineDate.setMonth(deadlineDate.getMonth() + goalPayload.timePeriodMonths);
 
-      const response = await api.createGoal({
+      await api.createGoal({
         name: goalPayload.name,
         category: goalPayload.category,
         target_amount: goalPayload.targetAmount,
@@ -121,8 +121,15 @@ export default function Goals() {
         notes: goalPayload.notes || "",
       });
 
-      setActiveGoals((prev) => [...prev, response]);
-      setAvailableBalance(availableBalance - goalPayload.targetAmount);
+      const data = await api.getGoals();
+      const allGoals = data.goals || [];
+      const now = new Date();
+      const active = allGoals.filter(g => new Date(g.deadline) > now && g.current_amount < g.target_amount);
+      const completed = allGoals.filter(g => g.current_amount >= g.target_amount);
+
+      setActiveGoals(active);
+      setCompletedGoals(completed);
+      setAvailableBalance(data.available_balance || 0);
       toast({ title: "Goal created successfully!" });
     } catch (error) {
       toast({ title: "Error creating goal", description: error.message, variant: "destructive" });

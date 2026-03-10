@@ -181,9 +181,15 @@ def create_goal(
 	user_id: str = Depends(get_current_user_id),
 ):
 	"""Create a new goal."""
+	if goal_data.current_amount > goal_data.target_amount:
+		raise HTTPException(
+			status_code=400,
+			detail="Current amount cannot exceed target amount",
+		)
+
 	# Validate available balance
 	available = _get_available_balance(user_id)
-	if goal_data.target_amount > available:
+	if goal_data.current_amount > available:
 		raise HTTPException(
 			status_code=400,
 			detail=f"Amount exceeds available balance. Available: ₹{available:.2f}",

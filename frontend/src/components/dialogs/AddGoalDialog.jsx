@@ -46,10 +46,14 @@ export function AddGoalDialog({ trigger, availableBalance = 0, onCreate }) {
       return;
     }
 
-    if (target > availableBalance) {
+    if (!Number.isFinite(current) || current < 0) {
+      toast({ title: "Enter a valid current amount", variant: "destructive" });
+      return;
+    }
+
+    if (current > target) {
       toast({
-        title: "Amount exceeds available balance",
-        description: `You can allocate up to ₹${availableBalance.toLocaleString()}.` ,
+        title: "Current amount cannot exceed target",
         variant: "destructive",
       });
       return;
@@ -57,7 +61,7 @@ export function AddGoalDialog({ trigger, availableBalance = 0, onCreate }) {
 
     if (current > availableBalance) {
       toast({
-        title: "Upfront amount too high",
+        title: "Current amount exceeds available balance",
         description: `You can allocate up to ₹${availableBalance.toLocaleString()} right now.`,
         variant: "destructive",
       });
