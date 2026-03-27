@@ -39,6 +39,7 @@ import { AddExpenseDialog } from "@/components/dialogs/AddExpenseDialog";
 import { AddGoalDialog } from "@/components/dialogs/AddGoalDialog";
 import { AddBudgetDialog } from "@/components/dialogs/AddBudgetDialog";
 import { AddIncomeDialog } from "@/components/dialogs/AddIncomeDialog";
+import { ViewIncomeDialog } from "@/components/dialogs/ViewIncomeDialog";
 import { supabase } from "@/lib/supabase";
 import { api } from "@/lib/api";
 
@@ -76,6 +77,7 @@ export default function DashboardHome() {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [monthlyIncomeTotal, setMonthlyIncomeTotal] = useState(null);
   const [showIncomePrompt, setShowIncomePrompt] = useState(false);
+  const [showViewIncomeDialog, setShowViewIncomeDialog] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
   const [userName, setUserName] = useState(() => {
     // Load from localStorage immediately for instant display
@@ -362,6 +364,11 @@ const upcomingBills = [
   const currentYear = now.getFullYear();
   const years = [currentYear, currentYear - 1, currentYear - 2]; // Current year and 2 previous
 
+  const handleIncomeChanged = () => {
+    // Trigger all dashboard data hooks that depend on localRefreshTrigger.
+    setLocalRefreshTrigger((prev) => prev + 1);
+  };
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Welcome Section */}
@@ -413,17 +420,34 @@ const upcomingBills = [
             <ArrowUpRight className="w-4 h-4" />
             Add Income
           </Button>
+          <Button
+            variant="hero"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => setShowViewIncomeDialog(true)}
+          >
+            View Income
+          </Button>
         </div>
         
         <AddIncomeDialog
           open={showIncomePrompt}
           onOpenChange={setShowIncomePrompt}
           allowUsePrevious={allowUsePrevious}
-          onSubmit={sharedSaveIncome}
+          onSubmit={async (payload) => {
+            await sharedSaveIncome?.(payload);
+            handleIncomeChanged();
+          }}
           previousIncome={previousIncome}
           loading={Boolean(sharedSaving)}
           storageKey={userId ? `ww:last-income:${userId}` : undefined}
           showTrigger={false}
+        />
+
+        <ViewIncomeDialog
+          open={showViewIncomeDialog}
+          onOpenChange={setShowViewIncomeDialog}
+          onIncomeChanged={handleIncomeChanged}
         />
       </div>
 

@@ -28,6 +28,21 @@ class IncomeCreate(BaseModel):
 		return value
 
 
+class IncomeUpdate(BaseModel):
+	amount: float
+	income_type: Optional[str] = None
+	source: Optional[str] = None
+	note: Optional[str] = None
+	received_date: Optional[date] = None
+
+	@field_validator("amount")
+	@classmethod
+	def validate_amount(cls, value: float) -> float:
+		if value < 0:
+			raise ValueError("Income cannot be negative")
+		return value
+
+
 def _fetch_latest_income(user_id: str) -> Optional[dict]:
 	"""Return latest income record for user or None."""
 	conn = get_db_connection()
@@ -83,6 +98,45 @@ def get_latest_income(user_id: str = Depends(get_current_user_id)):
 	if not income:
 		return {"amount": None, "income_type": None}
 	return income
+
+
+@router.get("/")
+def list_incomes(user_id: str = Depends(get_current_user_id)):
+	"""List all income rows for the current user, newest first."""
+	conn = get_db_connection()
+	try:
+		with conn.cursor() as cur:
+			cur.execute(
+				"""
+				SELECT id, amount, income_type, source, note, received_date, month, year, created_at
+				FROM incomes
+				WHERE user_id = %s
+				ORDER BY received_date DESC NULLS LAST, created_at DESC;
+				""",
+				(user_id,),
+			)
+			rows = cur.fetchall()
+
+		incomes = [
+			{
+				"id": row[0],
+				"user_id": user_id,
+				"amount": float(row[1]),
+				"income_type": row[2],
+				"source": row[3],
+				"note": row[4],
+				"received_date": row[5].isoformat() if row[5] else None,
+				"month": row[6],
+				"year": row[7],
+				"created_at": row[8].isoformat() if row[8] else None,
+			}
+			for row in rows
+		]
+		return {"incomes": incomes}
+	except Exception as exc:  # pragma: no cover - runtime guard
+		raise HTTPException(status_code=500, detail=f"Failed to fetch incomes: {exc}") from exc
+	finally:
+		conn.close()
 
 
 @router.get("/total")
@@ -161,6 +215,95 @@ def create_income(payload: IncomeCreate, user_id: str = Depends(get_current_user
 	except Exception as exc:  # pragma: no cover - runtime guard
 		conn.rollback()
 		raise HTTPException(status_code=500, detail=f"Failed to create income: {exc}") from exc
+	finally:
+		conn.close()
+
+
+@router.put("/{income_id}")
+def update_income(income_id: int, payload: IncomeUpdate, user_id: str = Depends(get_current_user_id)):
+	"""Update a single income row owned by the current user."""
+	current_date = payload.received_date or datetime.utcnow().date()
+	month = current_date.month
+	year = current_date.year
+
+	conn = get_db_connection()
+	try:
+		with conn.cursor() as cur:
+			cur.execute(
+				"""
+				UPDATE incomes
+				SET amount = %s,
+					income_type = COALESCE(%s, income_type),
+					source = %s,
+					note = %s,
+					received_date = %s,
+					month = %s,
+					year = %s
+				WHERE id = %s AND user_id = %s
+				RETURNING id, amount, income_type, source, note, received_date, month, year;
+				""",
+				(
+					payload.amount,
+					payload.income_type,
+					payload.source,
+					payload.note,
+					current_date,
+					month,
+					year,
+					income_id,
+					user_id,
+				),
+			)
+			row = cur.fetchone()
+			if not row:
+				raise HTTPException(status_code=404, detail="Income not found")
+		conn.commit()
+		return {
+			"id": row[0],
+			"user_id": user_id,
+			"amount": float(row[1]),
+			"income_type": row[2],
+			"source": row[3],
+			"note": row[4],
+			"received_date": row[5].isoformat() if row[5] else None,
+			"month": row[6],
+			"year": row[7],
+		}
+	except HTTPException:
+		conn.rollback()
+		raise
+	except Exception as exc:  # pragma: no cover - runtime guard
+		conn.rollback()
+		raise HTTPException(status_code=500, detail=f"Failed to update income: {exc}") from exc
+	finally:
+		conn.close()
+
+
+@router.delete("/{income_id}")
+def delete_income(income_id: int, user_id: str = Depends(get_current_user_id)):
+	"""Delete a single income row owned by the current user."""
+	conn = get_db_connection()
+	try:
+		with conn.cursor() as cur:
+			cur.execute(
+				"""
+				DELETE FROM incomes
+				WHERE id = %s AND user_id = %s
+				RETURNING id;
+				""",
+				(income_id, user_id),
+			)
+			row = cur.fetchone()
+			if not row:
+				raise HTTPException(status_code=404, detail="Income not found")
+		conn.commit()
+		return {"success": True, "id": row[0]}
+	except HTTPException:
+		conn.rollback()
+		raise
+	except Exception as exc:  # pragma: no cover - runtime guard
+		conn.rollback()
+		raise HTTPException(status_code=500, detail=f"Failed to delete income: {exc}") from exc
 	finally:
 		conn.close()
 

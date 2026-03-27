@@ -197,6 +197,23 @@ class ApiClient {
     });
   }
 
+  async getIncomes() {
+    return this.request('/income/');
+  }
+
+  async updateIncome(incomeId, data) {
+    return this.request(`/income/${incomeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteIncome(incomeId) {
+    return this.request(`/income/${incomeId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Goal endpoints
   async createGoal(data) {
     return this.request('/goals', {
