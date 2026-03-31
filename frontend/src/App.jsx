@@ -14,6 +14,7 @@ import Transactions from "./pages/dashboard/Transactions";
 import Reports from "./pages/dashboard/Reports";
 import Profile from "./pages/dashboard/Profile";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +29,14 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route
+                path="/dashboard"
+                element={(
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                )}
+              >
                 <Route index element={<DashboardHome />} />
                 <Route path="budgets" element={<Budgets />} />
                 <Route path="goals" element={<Goals />} />

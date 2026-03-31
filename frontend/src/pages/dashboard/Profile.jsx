@@ -17,8 +17,10 @@ import {
   LogOut,
   Check,
   Palette,
+  RefreshCw,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 const avatarOptions = [
   { id: "avatar1", src: "/assets/avatars/avatar1.png" },
@@ -134,8 +136,9 @@ export default function Profile() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
+      await supabase.auth.signOut();
       localStorage.removeItem("wealthwise_session");
       localStorage.removeItem("wealthwise_user");
       localStorage.removeItem("wealthwise_username");
@@ -143,13 +146,19 @@ export default function Profile() {
     } catch (e) {
       // ignore localStorage errors
     }
-    navigate("/auth");
+    navigate("/auth?mode=login", { replace: true });
   };
 
   const handleAvatarSelect = (id, src) => {
     setSelectedAvatarId(id);
     setEditedProfile((prev) => ({ ...prev, avatar_url: src }));
     setAvatarPreview(src);
+  };
+
+  const handleShowGuideAgain = () => {
+    localStorage.removeItem("ww:onboarding:dismissed");
+    toast.success("Getting Started guide will be shown on dashboard.");
+    navigate("/dashboard");
   };
 
   const getInitials = (name) => {
@@ -325,6 +334,24 @@ export default function Profile() {
             </div>
 
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card border-border shadow-md">
+        <CardHeader className="bg-card border-b border-border">
+          <CardTitle className="text-foreground">Onboarding Guide</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-foreground font-medium">Need the setup checklist again?</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Re-enable the dashboard Getting Started guide anytime.
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleShowGuideAgain}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Show Guide Again
+          </Button>
         </CardContent>
       </Card>
     </div>

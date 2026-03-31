@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import { api } from "@/lib/api";
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectPath = location.state?.from || "/dashboard";
   const [isLogin, setIsLogin] = useState(searchParams.get("mode") !== "signup");
   const [isResetMode, setIsResetMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -106,7 +108,7 @@ export default function Auth() {
             // If profile update fails, allow login to proceed.
           }
         }
-        navigate("/dashboard");
+        navigate(redirectPath, { replace: true });
       } else {
         // SIGN UP: create account with Supabase Auth
         const { data, error } = await supabase.auth.signUp({

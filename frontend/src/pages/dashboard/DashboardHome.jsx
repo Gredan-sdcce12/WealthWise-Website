@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -21,6 +21,9 @@ import {
   PiggyBank,
   Calendar,
   BarChart3,
+  Circle,
+  CircleCheck,
+  X,
 } from "lucide-react";
 import {
   BarChart,
@@ -79,6 +82,7 @@ export default function DashboardHome() {
   const [showIncomePrompt, setShowIncomePrompt] = useState(false);
   const [showViewIncomeDialog, setShowViewIncomeDialog] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
+  const [showGuide, setShowGuide] = useState(() => localStorage.getItem("ww:onboarding:dismissed") !== "true");
   const [userName, setUserName] = useState(() => {
     // Load from localStorage immediately for instant display
     return localStorage.getItem("wealthwise_username") || "";
@@ -369,6 +373,53 @@ const upcomingBills = [
     setLocalRefreshTrigger((prev) => prev + 1);
   };
 
+  const onboardingSteps = [
+    {
+      id: "profile",
+      label: "Set your profile name",
+      done: Boolean(userName?.trim()),
+      to: "/dashboard/profile",
+      action: "Open Profile",
+    },
+    {
+      id: "income",
+      label: "Add your first income",
+      done: allTimeIncome > 0,
+      to: "/dashboard",
+      action: "Add Income",
+      onClick: () => setShowIncomePrompt(true),
+    },
+    {
+      id: "transactions",
+      label: "Track at least 1 expense",
+      done: recentTransactions.length > 0,
+      to: "/dashboard/transactions",
+      action: "Add Expense",
+    },
+    {
+      id: "budget",
+      label: "Create your first budget",
+      done: budgets.length > 0,
+      to: "/dashboard/budgets",
+      action: "Create Budget",
+    },
+    {
+      id: "goal",
+      label: "Create a savings goal",
+      done: goals.length > 0 || goalsSavings > 0,
+      to: "/dashboard/goals",
+      action: "Add Goal",
+    },
+  ];
+
+  const completedOnboardingSteps = onboardingSteps.filter((step) => step.done).length;
+  const onboardingProgress = Math.round((completedOnboardingSteps / onboardingSteps.length) * 100);
+
+  const handleDismissGuide = () => {
+    localStorage.setItem("ww:onboarding:dismissed", "true");
+    setShowGuide(false);
+  };
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Welcome Section */}
@@ -450,6 +501,57 @@ const upcomingBills = [
           onIncomeChanged={handleIncomeChanged}
         />
       </div>
+
+      {showGuide && (
+        <Card variant="elevated" className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-xl">Getting Started Guide</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Complete these steps to set up your account faster and unlock better insights.
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleDismissGuide} className="h-8 w-8">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Setup progress</span>
+                <span className="font-medium">{completedOnboardingSteps}/{onboardingSteps.length} completed</span>
+              </div>
+              <Progress value={onboardingProgress} className="h-2" />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {onboardingSteps.map((step) => (
+                <div key={step.id} className="rounded-lg border border-border bg-background/70 p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-2 min-w-0">
+                    {step.done ? (
+                      <CircleCheck className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                    ) : (
+                      <Circle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    )}
+                    <span className="text-sm truncate">{step.label}</span>
+                  </div>
+                  {step.onClick ? (
+                    <Button size="sm" variant={step.done ? "outline" : "hero"} onClick={step.onClick}>
+                      {step.done ? "View" : step.action}
+                    </Button>
+                  ) : (
+                    <Button asChild size="sm" variant={step.done ? "outline" : "hero"}>
+                      <Link to={step.to}>{step.done ? "View" : step.action}</Link>
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

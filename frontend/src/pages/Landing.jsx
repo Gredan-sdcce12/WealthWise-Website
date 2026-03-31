@@ -4,64 +4,79 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import {
-  Wallet,
+  ShieldCheck,
   PieChart,
   Target,
   Receipt,
   ArrowRight,
-  Zap,
+  Sparkles,
   Gauge,
   CheckCircle,
+  TrendingUp,
+  CalendarClock,
+  CircleDollarSign,
+  Brain,
 } from "lucide-react";
 
-const features = [
+const featureCards = [
   {
-    icon: PieChart,
-    title: "AI Spending Predictions",
-    description: "Forecast upcoming expenses and cash flow using lightweight ML models.",
+    icon: Brain,
+    title: "Predictive Money Insights",
+    description: "See projected cash flow and upcoming expense pressure before it happens.",
   },
   {
     icon: Receipt,
-    title: "OCR Receipt Scanning",
-    description: "Upload receipts and automatically extract merchant, date, amount and category.",
+    title: "Receipt Scan in Seconds",
+    description: "Snap or upload receipts and auto-extract merchant, amount, and category.",
   },
   {
-    icon: Wallet,
-    title: "Smart Budget Tracking",
-    description: "Create budgets, track in real-time, and get actionable alerts.",
+    icon: PieChart,
+    title: "Budget Command Center",
+    description: "Track live budget health with smart alerts before you overspend.",
   },
   {
     icon: Target,
-    title: "Goal Setting & Monitoring",
-    description: "Define savings goals and monitor progress with clear visuals.",
+    title: "Goal Progress Clarity",
+    description: "Set savings targets and monitor progress with visual milestones.",
   },
   {
     icon: Gauge,
-    title: "Interactive Dashboard",
-    description: "Intuitive charts and tables to review transactions and trends.",
+    title: "Fast Interactive Dashboard",
+    description: "Explore trends quickly with clean charts, summaries, and filters.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Safe Auth and Session Flow",
+    description: "Secure sign-in flow keeps financial pages protected by default.",
   },
 ];
 
-const howItWorks = [
+const quickStats = [
+  { label: "Avg setup time", value: "2 min" },
+  { label: "Manual data entry", value: "-63%" },
+  { label: "Budget visibility", value: "Real-time" },
+];
+
+const journeySteps = [
   {
     step: "1",
-    title: "Sign Up & Connect",
-    description: "Create your account in seconds and securely connect your financial data.",
+    title: "Create Your Account",
+    description: "Sign up and unlock your personal financial workspace.",
   },
   {
     step: "2",
-    title: "Add Transactions",
-    description: "Manually add expenses or scan receipts with OCR for instant categorization.",
+    title: "Add Income and Expenses",
+    description: "Import transactions manually or with fast receipt scanning.",
   },
   {
     step: "3",
-    title: "Set Goals & Budgets",
-    description: "Define your financial targets and budget limits tailored to your needs.",
+    title: "Set Budgets and Goals",
+    description: "Define categories, limits, and savings targets that fit your plan.",
   },
   {
     step: "4",
-    title: "Get AI Insights",
-    description: "Receive predictions and recommendations powered by machine learning.",
+    title: "Act on Smart Insights",
+    description: "Use trend predictions and reports to improve every month.",
   },
 ];
 
@@ -70,114 +85,107 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      {/* ============ HERO SECTION ============ */}
-      <section className="py-20 md:py-32 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 gradient-hero opacity-30" />
-        <div className="absolute top-20 left-1/4 w-72 h-72 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
+      <section className="pt-28 pb-20 md:pb-24 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 gradient-hero opacity-35" />
+        <div className="absolute -top-10 -right-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 -left-10 w-72 h-72 bg-accent/20 rounded-full blur-3xl" />
 
-        {/* Floating Cards - Left Side */}
-        <div className="hidden lg:block absolute left-8 top-1/4 animate-float">
-          <Card className="glass p-4 w-48 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <PieChart className="w-5 h-5 text-primary" />
+        <div className="container mx-auto relative z-10 max-w-6xl">
+          <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <div className="space-y-7 animate-slide-up">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-4 py-2">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm font-medium">AI Powered Finance Planner</span>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">This Month</p>
-                <p className="text-lg font-bold text-foreground">₹45,230</p>
-              </div>
-            </div>
-          </Card>
-        </div>
 
-        <div className="hidden lg:block absolute left-16 bottom-1/4 animate-float" style={{ animationDelay: '1s' }}>
-          <Card className="glass p-4 w-44 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Target className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Savings</p>
-                <p className="text-sm font-semibold text-emerald-600">+₹12,000</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+              <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+                A smarter way to plan, track, and grow your money.
+              </h1>
 
-        {/* Floating Cards - Right Side */}
-        <div className="hidden lg:block absolute right-8 top-1/3 animate-float" style={{ animationDelay: '0.5s' }}>
-          <Card className="glass p-4 w-44 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Receipt className="w-5 h-5 text-accent" />
+              <p className="text-base md:text-lg text-muted-foreground max-w-xl">
+                WealthWise combines receipt OCR, live budgeting, and prediction-led insights in one clean dashboard so you can make faster money decisions with confidence.
+              </p>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Link to="/auth?mode=signup">
+                  <Button variant="hero" size="lg" className="group">
+                    Start Free Now
+                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+                <Link to="/auth?mode=login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  Already using WealthWise? <span className="underline font-medium">Sign in</span>
+                </Link>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Scanned</p>
-                <p className="text-lg font-bold text-foreground">156</p>
+
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                {quickStats.map((stat) => (
+                  <Card key={stat.label} className="glass border-border/60">
+                    <CardContent className="p-4 text-center">
+                      <p className="text-lg md:text-xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
-          </Card>
-        </div>
 
-        <div className="hidden lg:block absolute right-12 bottom-1/3 animate-float" style={{ animationDelay: '1.5s' }}>
-          <Card className="glass p-4 w-48 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Gauge className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Budget</p>
-                <p className="text-sm font-semibold text-primary">82% on track</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+            <Card className="glass shadow-xl border-border/60 animate-scale-in">
+              <CardContent className="p-6 md:p-7 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg md:text-xl font-semibold">This Month Snapshot</h3>
+                  <span className="text-xs rounded-full bg-primary/10 text-primary px-2.5 py-1">Live</span>
+                </div>
 
-        <div className="container mx-auto relative z-10 max-w-5xl">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-6">
-              <Zap className="w-4 h-4" />
-              <span className="text-sm font-medium">AI-Powered Financial Planning</span>
-            </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-secondary/70 p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                      <CircleDollarSign className="w-4 h-4" />
+                      Income
+                    </div>
+                    <p className="text-2xl font-bold">$5,420</p>
+                    <p className="text-xs text-emerald-600 mt-1">+8.4% from last month</p>
+                  </div>
 
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              AI-Powered Personal Finance Planner
-            </h1>
+                  <div className="rounded-xl bg-secondary/70 p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                      <TrendingUp className="w-4 h-4" />
+                      Spending
+                    </div>
+                    <p className="text-2xl font-bold">$3,910</p>
+                    <p className="text-xs text-amber-600 mt-1">Dining is 14% above trend</p>
+                  </div>
+                </div>
 
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Take control of your finances with intelligent tracking, OCR receipt scanning, and AI-driven insights. 
-              Built for the modern financial planner.
-            </p>
-
-            <div className="flex flex-col items-center justify-center gap-4">
-              <Link to="/auth?mode=signup">
-                <Button variant="hero" size="lg" className="group bg-emerald-600 hover:bg-emerald-700">
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link to="/auth?mode=login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Already have an account? <span className="font-medium underline">Sign In</span>
-              </Link>
-            </div>
+                <div className="rounded-xl border border-border/60 p-4 bg-background/70">
+                  <div className="flex items-start gap-3">
+                    <CalendarClock className="w-5 h-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">AI Forecast Alert</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        You are on track to save $980 this month. Reducing subscriptions by $35 keeps your goal fully on target.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* ============ FEATURES SECTION ============ */}
       <section id="features" className="py-16 md:py-24 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Makes It Feel Effortless</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to take control of your financial future
+              A focused set of features designed for clear decisions, not clutter.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {features.map((feature, index) => (
-              <Card key={index} variant="elevated" className="group hover:border-primary/50 transition-colors">
+            {featureCards.map((feature) => (
+              <Card key={feature.title} variant="elevated" className="group hover:border-primary/50 transition-colors">
                 <CardContent className="p-6">
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                     <feature.icon className="w-6 h-6 text-primary" />
@@ -191,18 +199,17 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ============ HOW IT WORKS SECTION ============ */}
       <section id="how-it-works" className="py-16 md:py-24 px-4 bg-muted/30">
         <div className="container mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">How It Works</h2>
+            <h2 className="text-4xl font-bold mb-4">Your 4-Step Money Workflow</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Get started in four simple steps and start planning smarter today.
+              Go from setup to confident planning in a single guided flow.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {howItWorks.map((item, index) => (
+            {journeySteps.map((item, index) => (
               <div key={index} className="relative">
                 <Card variant="elevated" className="h-full">
                   <CardContent className="p-6">
@@ -213,7 +220,7 @@ export default function Landing() {
                     <p className="text-muted-foreground text-sm">{item.description}</p>
                   </CardContent>
                 </Card>
-                {index < howItWorks.length - 1 && (
+                {index < journeySteps.length - 1 && (
                   <div className="hidden lg:block absolute top-1/2 -right-3 transform -translate-y-1/2">
                     <ArrowRight className="w-6 h-6 text-primary/30" />
                   </div>
@@ -224,13 +231,12 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ============ PROJECT STACK SECTION ============ */}
       <section id="stack" className="py-16 md:py-24 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Built With Modern Tech</h2>
+            <h2 className="text-4xl font-bold mb-4">Built on Reliable Modern Tech</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Leveraging the best tools for performance, scalability, and developer experience.
+              Fast frontend, secure auth, and scalable backend architecture.
             </p>
           </div>
 
@@ -253,18 +259,17 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ============ CTA SECTION ============ */}
       <section className="py-16 md:py-24 px-4 relative overflow-hidden">
         <div className="absolute inset-0 gradient-emerald opacity-5" />
         <div className="container mx-auto relative z-10">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Start Planning Your Financial Future Today</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">Plan Better. Spend Smarter. Save More.</h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Join users who are taking control of their finances with AI-powered insights and intelligent tracking.
+              Start with a free account and see your complete financial picture in minutes.
             </p>
             <Link to="/auth?mode=signup">
               <Button variant="hero" size="lg" className="group">
-                Get Started Free
+                Create Free Account
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>

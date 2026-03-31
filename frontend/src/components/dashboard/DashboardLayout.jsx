@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -10,6 +10,7 @@ const API_BASE = "http://127.0.0.1:8000";
 
 export function DashboardLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userId, setUserId] = useState(null);
   const [latestIncome, setLatestIncome] = useState(null);
@@ -66,7 +67,11 @@ export function DashboardLayout() {
       try {
         const { data } = await supabase.auth.getSession();
         if (!active) return;
-        const uid = data?.session?.user?.id || "test_user_123"; // Fallback for dev
+        const uid = data?.session?.user?.id;
+        if (!uid) {
+          navigate("/auth?mode=login", { replace: true, state: { from: location.pathname } });
+          return;
+        }
         setUserId(uid);
 
         const body = await api.getLatestIncome();
@@ -90,7 +95,7 @@ export function DashboardLayout() {
     return () => {
       active = false;
     };
-  }, [fetchMonthlyIncomeTotal, persistLastIncome]); // Added fetchMonthlyIncomeTotal as a dependency
+  }, [fetchMonthlyIncomeTotal, location.pathname, navigate, persistLastIncome]);
 
   const handleSaveIncome = useCallback(
     async ({ amount, income_type, source, note, received_date }) => {

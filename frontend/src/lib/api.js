@@ -12,12 +12,12 @@ class ApiClient {
   async withAuthHeaders(headers = {}) {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token;
-    
-    // For development: use a test token if no real token is available
-    const authToken = token || 'test_user_123';
+    if (!token) {
+      throw new Error('Please sign in to continue.');
+    }
     
     return {
-      Authorization: `Bearer ${authToken}`,
+      Authorization: `Bearer ${token}`,
       ...headers,
     };
   }
